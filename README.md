@@ -17,6 +17,7 @@ This is designed for running CLI-based coding agents safely in hostile condition
 - **Kernel-enforced filesystem boundaries**
   - The agent is allowed to read/write the current working directory (your repo) and the broker socket.
   - The agent is explicitly denied access to common sensitive locations like `~/.ssh`, `~/.m2`, and shell startup files.
+  - By default it also denies common ecosystem secret/config files used for dependency fetching and publishing (npm/pnpm/pip), such as `~/.npmrc`, `~/.config/pnpm`, `~/.config/pip`, `.netrc`, and repo-level `.npmrc`.
 
 - **Transparent, enforced tool mediation**
   - Even if an agent “forgets” instructions, `PATH` is arranged so `mvn` and `curl` resolve to **wrappers** first.

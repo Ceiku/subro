@@ -76,10 +76,27 @@ run_macos_sandbox() {
   (literal "${WORKDIR}/.env.test")
   (literal "${WORKDIR}/.env.production"))
 
+; Additional defaults: deny common package manager credential files in repo
+(deny file-read*
+  (literal "${WORKDIR}/.npmrc")
+  (literal "${WORKDIR}/.pypirc")
+  (literal "${WORKDIR}/.netrc"))
+
 ; Deny sensitive host dirs explicitly (defense-in-depth)
 (deny file-read* file-write*
   (subpath "${HOME}/.ssh")
-  (subpath "${HOME}/.m2"))
+  (subpath "${HOME}/.m2")
+  ; Node/npm
+  (literal "${HOME}/.npmrc")
+  (subpath "${HOME}/.config/npm")
+  ; pnpm
+  (subpath "${HOME}/.config/pnpm")
+  (subpath "${HOME}/.pnpm-store")
+  ; Python
+  (literal "${HOME}/.pypirc")
+  (subpath "${HOME}/.config/pip")
+  (subpath "${HOME}/.pip")
+  (literal "${HOME}/.netrc"))
 
 ; Deny common shell config files (defense-in-depth)
 (deny file-read*
@@ -122,8 +139,19 @@ run_linux_landlock() {
       --deny-read-write "$WORKDIR/.env.development" \
       --deny-read-write "$WORKDIR/.env.test" \
       --deny-read-write "$WORKDIR/.env.production" \
+      --deny-read-write "$WORKDIR/.npmrc" \
+      --deny-read-write "$WORKDIR/.pypirc" \
+      --deny-read-write "$WORKDIR/.netrc" \
       --deny-read-write "$HOME/.ssh" \
       --deny-read-write "$HOME/.m2" \
+      --deny-read-write "$HOME/.npmrc" \
+      --deny-read-write "$HOME/.config/npm" \
+      --deny-read-write "$HOME/.config/pnpm" \
+      --deny-read-write "$HOME/.pnpm-store" \
+      --deny-read-write "$HOME/.pypirc" \
+      --deny-read-write "$HOME/.config/pip" \
+      --deny-read-write "$HOME/.pip" \
+      --deny-read-write "$HOME/.netrc" \
       -- "$@"
 }
 
