@@ -1,0 +1,4 @@
+.broker/
+broker/.venv/
+.agent-home/
+.agent-path/

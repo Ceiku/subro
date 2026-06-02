@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 <agent-command> [args...]" >&2
+  exit 2
+fi
+
+SOCK="${BROKER_SOCK:-/tmp/agent-broker.sock}"
+WORKDIR="$(pwd)"
+AGENT_HOME="${WORKDIR}/.agent-home"
+mkdir -p "$AGENT_HOME"
+
+INTERCEPTORS_DIR="${ROOT}/interceptors"
+
+SANDBOX_PATH="${INTERCEPTORS_DIR}:/usr/bin:/bin:/usr/sbin:/sbin"
+
+run_unsandboxed() {
+  exec env -i \
+    PATH="$SANDBOX_PATH" \
+    HOME="$AGENT_HOME" \
+    TMPDIR="/tmp" \
+    BROKER_SOCK="$SOCK" \
+    "$@"
+}
+
+run_macos_sandbox() {
+  local profile
+  profile="$(cat <<EOF
+(version 1)
+(deny default)
+
+; Basic process and syscalls
+(allow process*)
+
+; Allow stdout/stderr and basic system reads
+(allow file-read*
+  (subpath "/usr")
+  (subpath "/bin")
+  (subpath "/sbin")
+  (subpath "/System")
+  (subpath "/Library")
+  (subpath "/private/var")
+  (subpath "/tmp"))
+
+; Allow full access to the working directory and the broker socket
+(allow file-read* file-write* file-read-data file-write-data
+  (subpath "${WORKDIR}")
+  (literal "${SOCK}"))
+
+; Deny sensitive host dirs explicitly (defense-in-depth)
+(deny file-read* file-write*
+  (subpath "${HOME}/.ssh")
+  (subpath "${HOME}/.m2"))
+
+; Deny common shell config files (defense-in-depth)
+(deny file-read*
+  (literal "${HOME}/.bashrc")
+  (literal "${HOME}/.bash_profile")
+  (literal "${HOME}/.profile")
+  (literal "${HOME}/.zshrc")
+  (literal "${HOME}/.zprofile")
+  (literal "${HOME}/.zshenv"))
+EOF
+)"
+
+  exec env -i \
+    PATH="$SANDBOX_PATH" \
+    HOME="$AGENT_HOME" \
+    TMPDIR="/tmp" \
+    BROKER_SOCK="$SOCK" \
+    sandbox-exec -p "$profile" -- "$@"
+}
+
+run_linux_landlock() {
+  if ! command -v landlock-restrict >/dev/null 2>&1; then
+    echo "landlock-restrict not found; running without kernel sandbox." >&2
+    run_unsandboxed "$@"
+  fi
+
+  # landlock-restrict policy:
+  # - allow full access to current workdir + socket
+  # - deny sensitive host dirs (best-effort, depends on landlock-restrict implementation)
+  exec env -i \
+    PATH="$SANDBOX_PATH" \
+    HOME="$AGENT_HOME" \
+    TMPDIR="/tmp" \
+    BROKER_SOCK="$SOCK" \
+    landlock-restrict \
+      --allow-read-write "$WORKDIR" \
+      --allow-read-write "$(dirname "$SOCK")" \
+      --deny-read-write "$HOME/.ssh" \
+      --deny-read-write "$HOME/.m2" \
+      -- "$@"
+}
+
+uname_s="$(uname -s)"
+case "$uname_s" in
+  Darwin)
+    if command -v sandbox-exec >/dev/null 2>&1; then
+      run_macos_sandbox "$@"
+    fi
+    echo "sandbox-exec not found; running without kernel sandbox." >&2
+    run_unsandboxed "$@"
+    ;;
+  Linux)
+    run_linux_landlock "$@"
+    ;;
+  *)
+    echo "Unsupported OS: $uname_s (running without kernel sandbox)" >&2
+    run_unsandboxed "$@"
+    ;;
+esac
+

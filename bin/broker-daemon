@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BROKER_DIR="${ROOT}/broker"
+VENV_DIR="${BROKER_DIR}/.venv"
+PID_DIR="${ROOT}/.broker"
+PID_FILE="${PID_DIR}/broker.pid"
+LOG_FILE="${PID_DIR}/log.txt"
+
+mkdir -p "$PID_DIR"
+
+ensure_venv() {
+  if [[ ! -d "$VENV_DIR" ]]; then
+    python3 -m venv "$VENV_DIR"
+  fi
+  "${VENV_DIR}/bin/python" -m pip install --upgrade pip >/dev/null
+  "${VENV_DIR}/bin/python" -m pip install -r "${BROKER_DIR}/requirements.txt" >/dev/null
+}
+
+is_running() {
+  if [[ -f "$PID_FILE" ]]; then
+    local pid
+    pid="$(cat "$PID_FILE")"
+    if kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+cmd="${1:-}"
+
+case "$cmd" in
+  start)
+    if is_running; then
+      echo "Broker already running (pid $(cat "$PID_FILE"))."
+      exit 0
+    fi
+
+    ensure_venv
+
+    # shellcheck disable=SC2091
+    nohup "${VENV_DIR}/bin/python" "${BROKER_DIR}/main.py" >>"$LOG_FILE" 2>&1 &
+    echo "$!" >"$PID_FILE"
+    echo "Broker started (pid $!). Logs: $LOG_FILE"
+    ;;
+
+  stop)
+    if ! [[ -f "$PID_FILE" ]]; then
+      echo "Broker not running (no pid file)."
+      exit 0
+    fi
+    pid="$(cat "$PID_FILE")"
+    if kill -0 "$pid" 2>/dev/null; then
+      kill "$pid"
+      echo "Sent SIGTERM to broker (pid $pid)."
+    else
+      echo "Stale pid file (pid $pid not running)."
+    fi
+    rm -f "$PID_FILE"
+    ;;
+
+  status)
+    if is_running; then
+      echo "Broker running (pid $(cat "$PID_FILE"))."
+      exit 0
+    fi
+    echo "Broker not running."
+    exit 1
+    ;;
+
+  logs)
+    if [[ -f "$LOG_FILE" ]]; then
+      echo "Logs at: $LOG_FILE"
+      exec /usr/bin/tail -n 200 "$LOG_FILE"
+    fi
+    echo "No logs found at: $LOG_FILE"
+    exit 1
+    ;;
+
+  *)
+    echo "Usage: $0 {start|stop|status|logs}"
+    exit 2
+    ;;
+esac
+

@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SOCK="${BROKER_SOCK:-/tmp/agent-broker.sock}"
+WORKDIR="$(pwd)"
+
+# If no placeholder key is present, run curl natively in the sandbox.
+has_placeholder=0
+for a in "$@"; do
+  if [[ "$a" == *"X-PROD-KEY"* ]]; then
+    has_placeholder=1
+    break
+  fi
+done
+
+if [[ "$has_placeholder" -eq 0 ]]; then
+  exec /usr/bin/curl "$@"
+fi
+
+python3 - "$SOCK" "$WORKDIR" "$@" <<'PY'
+import json
+import socket
+import sys
+
+sock_path = sys.argv[1]
+workdir = sys.argv[2]
+args = sys.argv[3:]
+
+req = {"tool": "curl", "args": args, "workdir": workdir}
+payload = (json.dumps(req, ensure_ascii=False) + "\n").encode("utf-8")
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+try:
+    s.connect(sock_path)
+    s.sendall(payload)
+    buf = b""
+    while not buf.endswith(b"\n"):
+        chunk = s.recv(65536)
+        if not chunk:
+            break
+        buf += chunk
+finally:
+    try:
+        s.close()
+    except Exception:
+        pass
+
+if not buf:
+    print("broker returned no response", file=sys.stderr)
+    sys.exit(1)
+
+resp = json.loads(buf.decode("utf-8"))
+stdout = resp.get("stdout", "")
+stderr = resp.get("stderr", "")
+code = int(resp.get("exit_code", 1))
+
+if stdout:
+    sys.stdout.write(stdout)
+if stderr:
+    sys.stderr.write(stderr)
+sys.exit(code)
+PY
+
