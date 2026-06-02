@@ -45,76 +45,58 @@ run_unsandboxed() {
 }
 
 run_macos_sandbox() {
-  local profile
-  profile="$(cat <<EOF
+  local profile_file
+  profile_file="$(mktemp "${TMPDIR:-/tmp}/subro-seatbelt.XXXXXX")"
+  # Seatbelt: broad read + scoped write + explicit denies (invalid ops like
+  # process* / file-read-data cause sandbox-exec to abort on macOS).
+  cat >"$profile_file" <<EOF
 (version 1)
 (deny default)
-
-; Basic process and syscalls
-(allow process*)
-
-; Allow stdout/stderr and basic system reads
-(allow file-read*
-  (subpath "/usr")
-  (subpath "/bin")
-  (subpath "/sbin")
-  (subpath "/System")
-  (subpath "/Library")
-  (subpath "/private/var")
-  (subpath "/tmp"))
-
-; Allow full access to the working directory and the broker socket
-(allow file-read* file-write* file-read-data file-write-data
-  (subpath "${WORKDIR}")
-  (literal "${SOCK}"))
-
-; Pattern A: allow repo .env for humans, but deny it to the agent
-(deny file-read*
-  (literal "${WORKDIR}/.env")
-  (literal "${WORKDIR}/.env.local")
-  (literal "${WORKDIR}/.env.development")
-  (literal "${WORKDIR}/.env.test")
-  (literal "${WORKDIR}/.env.production"))
-
-; Additional defaults: deny common package manager credential files in repo
-(deny file-read*
-  (literal "${WORKDIR}/.npmrc")
-  (literal "${WORKDIR}/.pypirc")
-  (literal "${WORKDIR}/.netrc"))
-
-; Deny sensitive host dirs explicitly (defense-in-depth)
-(deny file-read* file-write*
-  (subpath "${HOME}/.ssh")
-  (subpath "${HOME}/.m2")
-  ; Node/npm
-  (literal "${HOME}/.npmrc")
-  (subpath "${HOME}/.config/npm")
-  ; pnpm
-  (subpath "${HOME}/.config/pnpm")
-  (subpath "${HOME}/.pnpm-store")
-  ; Python
-  (literal "${HOME}/.pypirc")
-  (subpath "${HOME}/.config/pip")
-  (subpath "${HOME}/.pip")
-  (literal "${HOME}/.netrc"))
-
-; Deny common shell config files (defense-in-depth)
-(deny file-read*
-  (literal "${HOME}/.bashrc")
-  (literal "${HOME}/.bash_profile")
-  (literal "${HOME}/.profile")
-  (literal "${HOME}/.zshrc")
-  (literal "${HOME}/.zprofile")
-  (literal "${HOME}/.zshenv"))
+(allow process-exec)
+(allow process-fork)
+(allow signal)
+(allow sysctl-read)
+(allow mach-lookup)
+(allow file-read*)
+(allow file-write* (subpath "/tmp"))
+(allow file-write* (subpath "/dev"))
+(allow file-write* (subpath "${WORKDIR}"))
+(allow file-write* (literal "${SOCK}"))
+(allow network-outbound)
+(deny file-read* (literal "${WORKDIR}/.env"))
+(deny file-read* (literal "${WORKDIR}/.env.local"))
+(deny file-read* (literal "${WORKDIR}/.env.development"))
+(deny file-read* (literal "${WORKDIR}/.env.test"))
+(deny file-read* (literal "${WORKDIR}/.env.production"))
+(deny file-read* (literal "${WORKDIR}/.npmrc"))
+(deny file-read* (literal "${WORKDIR}/.pypirc"))
+(deny file-read* (literal "${WORKDIR}/.netrc"))
+(deny file-read* file-write* (subpath "${HOME}/.ssh"))
+(deny file-read* file-write* (subpath "${HOME}/.m2"))
+(deny file-read* (literal "${HOME}/.npmrc"))
+(deny file-read* (subpath "${HOME}/.config/npm"))
+(deny file-read* (subpath "${HOME}/.config/pnpm"))
+(deny file-read* (subpath "${HOME}/.pnpm-store"))
+(deny file-read* (literal "${HOME}/.pypirc"))
+(deny file-read* (subpath "${HOME}/.config/pip"))
+(deny file-read* (subpath "${HOME}/.pip"))
+(deny file-read* (literal "${HOME}/.netrc"))
+(deny file-read* (literal "${HOME}/.bashrc"))
+(deny file-read* (literal "${HOME}/.bash_profile"))
+(deny file-read* (literal "${HOME}/.profile"))
+(deny file-read* (literal "${HOME}/.zshrc"))
+(deny file-read* (literal "${HOME}/.zprofile"))
+(deny file-read* (literal "${HOME}/.zshenv"))
 EOF
-)"
 
   env -i \
     PATH="$SANDBOX_PATH" \
     HOME="$AGENT_HOME" \
     TMPDIR="/tmp" \
     BROKER_SOCK="$SOCK" \
-    sandbox-exec -p "$profile" -- "$@"
+    sandbox-exec -f "$profile_file" -- "$@"
+  rc=$?
+  rm -f "$profile_file"
   rc=$?
   if [[ $rc -ne 0 ]]; then
     echo "sandbox-exec failed (exit $rc). You may need to run from a normal host terminal, or set SUBRO_NO_SANDBOX=1 to run without kernel sandboxing." >&2
