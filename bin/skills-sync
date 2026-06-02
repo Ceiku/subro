@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# Sync skills/*/SKILL.md into harness discovery paths (Cursor, pi.dev, agents).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SKILLS_SRC="${ROOT}/skills"
+
+if [[ ! -d "$SKILLS_SRC" ]]; then
+  echo "No skills/ directory at $SKILLS_SRC" >&2
+  exit 1
+fi
+
+link_skill() {
+  local name="$1"
+  local target="$2"
+  local dest="$3"
+  mkdir -p "$(dirname "$dest")"
+  ln -sfn "$target" "$dest"
+}
+
+count=0
+for skill_dir in "$SKILLS_SRC"/*; do
+  [[ -d "$skill_dir" ]] || continue
+  [[ -f "$skill_dir/SKILL.md" ]] || continue
+  name="$(basename "$skill_dir")"
+  link_skill "$name" "$skill_dir" "${ROOT}/.cursor/skills/${name}"
+  link_skill "$name" "$skill_dir" "${ROOT}/.pi/skills/${name}"
+  link_skill "$name" "$skill_dir" "${ROOT}/.agents/skills/${name}"
+  count=$((count + 1))
+done
+
+# pi.dev: ensure settings reference project skills directory
+PI_SETTINGS="${ROOT}/.pi/settings.json"
+mkdir -p "${ROOT}/.pi"
+if [[ ! -f "$PI_SETTINGS" ]]; then
+  cat >"$PI_SETTINGS" <<EOF
+{
+  "skills": ["./skills"]
+}
+EOF
+else
+  if ! grep -q '"skills"' "$PI_SETTINGS" 2>/dev/null; then
+    echo "Note: add \"./skills\" to skills array in $PI_SETTINGS for pi.dev" >&2
+  fi
+fi
+
+# Cursor: project rules pointer (optional discoverability)
+CURSOR_RULES="${ROOT}/.cursor/rules/subro-skills.mdc"
+mkdir -p "${ROOT}/.cursor/rules"
+cat >"$CURSOR_RULES" <<EOF
+---
+description: Subro brokered CLI skills available in this project
+globs:
+alwaysApply: true
+---
+
+# Subro skills
+
+This project uses kernel-sandboxed agents with broker-mediated tools.
+
+Skill instructions live under \`skills/<name>/SKILL.md\` (also linked under \`.cursor/skills/\`).
+
+Run \`./bin/skills-sync\` after adding skills. Use brokered CLIs (e.g. \`entur-departures\`) — not raw curl for those APIs.
+
+Available skills directory: \`skills/\`
+EOF
+
+# AGENTS.md index for generic harnesses
+AGENTS_MD="${ROOT}/AGENTS.md"
+{
+  echo "# Agent instructions (subro)"
+  echo
+  echo "Sandboxed agent runtime with broker-mediated tools. Start with:"
+  echo
+  echo '```bash'
+  echo "./bin/agent bash   # or: ./bin/agent pi.dev"
+  echo '```'
+  echo
+  echo "## Skills"
+  echo
+  for skill_dir in "$SKILLS_SRC"/*; do
+    [[ -d "$skill_dir" ]] || continue
+    [[ -f "$skill_dir/SKILL.md" ]] || continue
+    n="$(basename "$skill_dir")"
+    echo "- [\`${n}\`](skills/${n}/SKILL.md)"
+  done
+  echo
+  echo "Run \`./bin/skills-sync\` after adding or changing skills."
+} >"$AGENTS_MD"
+
+echo "Synced $count skill(s) to .cursor/skills, .pi/skills, .agents/skills"
+echo "Updated: .pi/settings.json (if new), .cursor/rules/subro-skills.mdc, AGENTS.md"

@@ -1,0 +1,15 @@
+---
+description: Subro brokered CLI skills available in this project
+globs:
+alwaysApply: true
+---
+
+# Subro skills
+
+This project uses kernel-sandboxed agents with broker-mediated tools.
+
+Skill instructions live under `skills/<name>/SKILL.md` (also linked under `.cursor/skills/`).
+
+Run `./bin/skills-sync` after adding skills. Use brokered CLIs (e.g. `entur-departures`) — not raw curl for those APIs.
+
+Available skills directory: `skills/`

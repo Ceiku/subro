@@ -24,12 +24,10 @@ def default_sock() -> str:
     return "/tmp/agent-broker/agent-broker.sock"
 
 
-def call_broker(tool: str, args: List[str], workdir: str | None = None) -> int:
+def call_broker_json(req: dict) -> int:
     sock_path = os.environ.get("BROKER_SOCK", default_sock())
-    workdir = workdir or os.getcwd()
-    req: dict = {"tool": tool, "args": args, "workdir": workdir}
     token = os.environ.get("BROKER_SOCKET_TOKEN", "").strip()
-    if token:
+    if token and "token" not in req:
         req["token"] = token
 
     payload = (json.dumps(req, ensure_ascii=False) + "\n").encode("utf-8")
@@ -62,6 +60,11 @@ def call_broker(tool: str, args: List[str], workdir: str | None = None) -> int:
     if stderr:
         sys.stderr.write(stderr)
     return code
+
+
+def call_broker(tool: str, args: List[str], workdir: str | None = None) -> int:
+    workdir = workdir or os.getcwd()
+    return call_broker_json({"tool": tool, "args": args, "workdir": workdir})
 
 
 def main() -> None:

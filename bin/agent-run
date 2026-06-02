@@ -33,7 +33,10 @@ mkdir -p "$AGENT_HOME"
 
 INTERCEPTORS_DIR="${ROOT}/interceptors"
 
-SANDBOX_PATH="${INTERCEPTORS_DIR}:/usr/bin:/bin:/usr/sbin:/sbin"
+AGENT_BIN_DIR="${WORKDIR}/.agent-bin"
+mkdir -p "$AGENT_BIN_DIR"
+
+SANDBOX_PATH="${AGENT_BIN_DIR}:${INTERCEPTORS_DIR}:/usr/bin:/bin:/usr/sbin:/sbin"
 
 load_broker_env() {
   local env_file="${BROKER_ENV_FILE:-${HOME}/.config/agent-broker/env}"
@@ -53,6 +56,7 @@ sandbox_env() {
     HOME="$AGENT_HOME" \
     TMPDIR="/tmp" \
     BROKER_SOCK="$SOCK" \
+    SUBRO_ROOT="$ROOT" \
     ${BROKER_SOCKET_TOKEN:+BROKER_SOCKET_TOKEN="$BROKER_SOCKET_TOKEN"} \
     "$@"
 }

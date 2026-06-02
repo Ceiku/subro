@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LOCK="${ROOT}/subro.lock.json"
+PKGS_DIR="${ROOT}/packages"
+VENV="${ROOT}/broker/.venv"
+
+broker_python() {
+  if [[ ! -d "$VENV" ]]; then
+    python3 -m venv "$VENV"
+    "$VENV/bin/pip" install -r "${ROOT}/broker/requirements.txt" >/dev/null
+  fi
+  echo "$VENV/bin/python"
+}
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+  install)
+    PY="$(broker_python)"
+    targets=()
+    if [[ $# -eq 0 ]]; then
+      for d in "$PKGS_DIR"/*; do
+        [[ -d "$d" && -f "$d/apm.yml" ]] && targets+=("$d")
+      done
+    else
+      for arg in "$@"; do
+        if [[ -d "$arg" ]]; then
+          targets+=("$arg")
+        elif [[ -d "$PKGS_DIR/$arg" ]]; then
+          targets+=("$PKGS_DIR/$arg")
+        else
+          echo "Package not found: $arg" >&2
+          exit 1
+        fi
+      done
+    fi
+    if [[ ${#targets[@]} -eq 0 ]]; then
+      echo "No packages to install" >&2
+      exit 1
+    fi
+    while IFS= read -r line; do
+      echo "$line"
+    done < <("$PY" - "$ROOT" "$LOCK" "${targets[@]}" <<'PY'
+import sys
+from pathlib import Path
+
+repo = Path(sys.argv[1])
+lock = Path(sys.argv[2])
+pkgs = [Path(p) for p in sys.argv[3:]]
+sys.path.insert(0, str(repo / "broker"))
+from apm import install
+
+for line in install(pkgs, repo, lock):
+    print(line)
+PY
+)
+    "$ROOT/bin/skills-sync"
+    echo "Restart broker: ./bin/broker-daemon stop && ./bin/broker-daemon start"
+    ;;
+
+  list)
+    if [[ -f "$LOCK" ]]; then
+      python3 -c "import json; d=json.load(open('$LOCK')); [print(f\"{p['name']}@{p['version']}\") for p in d.get('packages',[])]"
+    else
+      echo "No lockfile yet. Run: ./bin/apm install"
+    fi
+    ;;
+
+  *)
+    echo "Usage: $0 {install|list} [package...]"
+    exit 2
+    ;;
+esac

@@ -17,4 +17,5 @@ if [[ -f "$BROKER_ENV_FILE" ]]; then
 fi
 
 "$ROOT/bin/broker-daemon" start >/dev/null 2>&1 || true
+"$ROOT/bin/skills-sync" >/dev/null 2>&1 || true
 exec "$ROOT/bin/agent-run" "$@"

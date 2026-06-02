@@ -86,6 +86,15 @@ Optional broker env: `ENTUR_CLIENT_NAME=subro-yourname` (defaults to `subro-agen
 
 Agent instructions: `skills/entur-departures/SKILL.md`.
 
+## Harness integration (pi.dev / Cursor)
+
+```bash
+./bin/skills-sync   # links skills → .cursor/skills, .pi/skills; updates AGENTS.md
+./bin/agent pi.dev  # auto-runs skills-sync + broker + sandbox
+```
+
+See [docs/P1-P4.md](docs/P1-P4.md) for `register-skill`, `apm`, PII scrubbing, and STDIO broker.
+
 ## Quick start
 
 ### 0) One-time setup

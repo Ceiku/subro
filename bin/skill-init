@@ -82,4 +82,6 @@ echo
 echo "Next:"
 echo "  1) Implement run() in broker/skills/${MODULE}.py"
 echo "  2) ./bin/broker-daemon stop && ./bin/broker-daemon start"
-echo "  3) ./bin/doctor"
+echo "  3) ./bin/skills-sync"
+echo "  4) ./bin/broker-daemon stop && ./bin/broker-daemon start"
+echo "  5) ./bin/doctor"

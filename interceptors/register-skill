@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: register-skill '<json>'" >&2
+  echo 'Example: register-skill '"'"'{"name":"get-jira","script_relpath":".agent-skills/get-jira.py","required_secrets":["JIRA_API_KEY"]}'"'" >&2
+  exit 2
+fi
+
+WORKDIR="$(pwd)"
+exec env TMPDIR="${TMPDIR:-/tmp}" PYTHONDONTWRITEBYTECODE=1 \
+  python3 - "$DIR" "$WORKDIR" "$1" <<'PY'
+import importlib.util
+import json
+import sys
+
+broker_call_path = sys.argv[1] + "/_broker_call.py"
+workdir = sys.argv[2]
+payload_raw = sys.argv[3]
+
+spec = importlib.util.spec_from_file_location("broker_call", broker_call_path)
+mod = importlib.util.module_from_spec(spec)
+assert spec.loader
+spec.loader.exec_module(mod)
+
+try:
+    register_skill = json.loads(payload_raw)
+except json.JSONDecodeError as e:
+    print(f"invalid json: {e}", file=sys.stderr)
+    sys.exit(2)
+
+req = {
+    "tool": "register-skill",
+    "workdir": workdir,
+    "args": [],
+    "register_skill": register_skill,
+}
+sys.exit(mod.call_broker_json(req))
+PY

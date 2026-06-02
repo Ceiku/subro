@@ -57,12 +57,13 @@ else
   fi
 fi
 
-chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/{agent,agent-run,broker-daemon,install-interceptors,doctor,skill-init} 2>/dev/null || true
+chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/{agent,agent-run,broker-daemon,broker-stdio,install-interceptors,doctor,skill-init,skills-sync,apm} 2>/dev/null || true
 chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/interceptors/{_broker_call.py,mvn,curl,entur-departures} 2>/dev/null || true
 
 echo
 echo "Next steps:"
 echo "1) Edit broker env file: $BROKER_ENV_FILE"
 echo "2) Start broker: BROKER_ENV_FILE=\"$BROKER_ENV_FILE\" ./bin/broker-daemon start"
-echo "3) Run sandboxed command: ./bin/agent-run <your-cli>"
+echo "3) Sync harness skills: ./bin/skills-sync"
+echo "4) Run sandboxed command: ./bin/agent <your-cli>"
 

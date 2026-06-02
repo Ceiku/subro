@@ -2,6 +2,10 @@
 broker/.venv/
 .agent-home/
 .agent-path/
+.agent-bin/
+.cursor/skills/
+.pi/skills/
+.agents/skills/
 .env
 .env.*
 .npmrc

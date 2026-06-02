@@ -1,0 +1,7 @@
+name: entur-departures
+version: 1.0.0
+description: Read-only Entur departure board for three Oslo stops
+requires_env: []
+skill_md: ../../skills/entur-departures/SKILL.md
+broker_skill: ../../broker/skills/entur_departures.py
+interceptor: ../../interceptors/entur-departures

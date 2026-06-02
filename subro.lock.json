@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "packages": [
+    {
+      "name": "entur-departures",
+      "version": "1.0.0",
+      "source": "packages/entur-departures",
+      "installed_at": "2026-06-02T15:57:46.641668+00:00",
+      "files": {
+        "skill_md": "d64b251d6b6666f6a6f572d8ad480e815af0f3b82809ebfb9ca7edfffd0650e0",
+        "broker_skill": "02227c3ceac8abdec9204569527b5ef7e9af52f69e326c99e01b2441c105c2b3",
+        "interceptor": "bb363865cec9018de40005b33b7f38c1037ad1947a62667e8cc5933c25083fe0"
+      },
+      "requires_env": []
+    }
+  ]
+}

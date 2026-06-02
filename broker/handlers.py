@@ -5,16 +5,21 @@ from __future__ import annotations
 import importlib.util
 import os
 import subprocess
-import sys
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
-from policy import scrub_secrets
+from register import load_registered, run_registered_skill
+from scrub import scrub_all
 
-# (args, workdir, prod_api_key) -> (exit_code, stdout, stderr, secrets_to_scrub)
 Handler = Callable[..., Tuple[int, str, str, List[str]]]
 
 _SKILLS_DIR = Path(__file__).resolve().parent / "skills"
+_REGISTRY: Optional[Dict[str, Handler]] = None
+
+
+def invalidate_registry() -> None:
+    global _REGISTRY
+    _REGISTRY = None
 
 
 def _run_mvn(args: List[str], workdir: Path, prod_api_key: Optional[str]) -> Tuple[int, str, str, List[str]]:
@@ -82,12 +87,29 @@ def _load_skill_modules() -> Dict[str, Handler]:
     return registry
 
 
+def _registered_handler(skill_name: str) -> Handler:
+    def _handler(
+        args: List[str], workdir: Path, prod_api_key: Optional[str]
+    ) -> Tuple[int, str, str, List[str]]:
+        return run_registered_skill(skill_name, args, workdir)
+
+    return _handler
+
+
+def _load_registered_handlers() -> Dict[str, Handler]:
+    registry: Dict[str, Handler] = {}
+    for entry in load_registered().get("skills") or []:
+        name = entry.get("name")
+        if not name:
+            continue
+        registry[str(name)] = _registered_handler(str(name))
+    return registry
+
+
 _BUILTIN: Dict[str, Handler] = {
     "mvn": _run_mvn,
     "curl": _run_curl,
 }
-
-_REGISTRY: Optional[Dict[str, Handler]] = None
 
 
 def registry() -> Dict[str, Handler]:
@@ -95,6 +117,7 @@ def registry() -> Dict[str, Handler]:
     if _REGISTRY is None:
         merged = dict(_BUILTIN)
         merged.update(_load_skill_modules())
+        merged.update(_load_registered_handlers())
         _REGISTRY = merged
     return _REGISTRY
 
@@ -124,7 +147,7 @@ def dispatch_scrubbed(
     code, stdout, stderr, secrets = dispatch(tool, args, workdir, prod_api_key)
     return (
         code,
-        scrub_secrets(stdout, secrets),
-        scrub_secrets(stderr, secrets),
+        scrub_all(stdout, secrets),
+        scrub_all(stderr, secrets),
         code == 0,
     )

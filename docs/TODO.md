@@ -18,7 +18,7 @@ Status legend: `done` | `partial` | `todo`
 |----|------|--------|-------|
 | P1.1 | `bin/skill-init <name>` scaffold | done | skill module + interceptor + SKILL.md |
 | P1.2 | Document skill contract in README | done | TOOL_NAME, run(), restart broker |
-| P1.3 | Harness skill loading (pi.dev / Cursor) | todo | SKILL.md not auto-wired |
+| P1.3 | Harness skill loading (pi.dev / Cursor) | done | `bin/skills-sync`, `.cursor/`, `.pi/`, `AGENTS.md` |
 
 ## P2 — Security hardening
 
@@ -44,7 +44,7 @@ Status legend: `done` | `partial` | `todo`
 
 | ID | Item | Status |
 |----|------|--------|
-| P4.1 | Runtime `register-skill` over UDS | todo |
-| P4.2 | Agent package manager / lockfile | todo |
-| P4.3 | PII scrubber (Presidio / regex pack) | todo |
-| P4.4 | MCP or STDIO broker transport | todo |
+| P4.1 | Runtime `register-skill` over UDS | done | `register-skill` CLI + `.agent-bin/` shims |
+| P4.2 | Agent package manager / lockfile | done | `bin/apm`, `subro.lock.json`, `packages/*/apm.yml` |
+| P4.3 | PII scrubber (Presidio / regex pack) | done | `broker/scrub.py` regex pack (default on) |
+| P4.4 | MCP or STDIO broker transport | done | `bin/broker-stdio` + `broker/stdio_main.py` |
