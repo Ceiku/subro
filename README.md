@@ -6,6 +6,32 @@ This repo provides a **local, high-performance tool-execution split**:
 - For sensitive tools (`mvn`, `curl` when it contains a placeholder key), lightweight **interceptors** forward the request to a **privileged broker** over a **Unix Domain Socket**.
 - The broker executes the real tool with host privileges, injects secrets, **scrubs sensitive strings** from outputs, and returns safe results.
 
+## What this solves (security)
+
+This is designed for running CLI-based coding agents safely in hostile conditions (prompt injection, malicious repos, untrusted build output).
+
+- **Secret isolation**
+  - The agent process starts under `env -i` (no inherited env vars) and runs with a **fake `HOME`** in the working directory.
+  - High-privilege secrets live **only** in the broker’s environment (loaded from `~/.config/agent-broker/env` by default), not in the agent.
+
+- **Kernel-enforced filesystem boundaries**
+  - The agent is allowed to read/write the current working directory (your repo) and the broker socket.
+  - The agent is explicitly denied access to common sensitive locations like `~/.ssh`, `~/.m2`, and shell startup files.
+
+- **Transparent, enforced tool mediation**
+  - Even if an agent “forgets” instructions, `PATH` is arranged so `mvn` and `curl` resolve to **wrappers** first.
+  - Those wrappers forward structured requests to the broker, so privileged actions happen in a single choke point you control.
+
+- **Output scrubbing before the LLM sees it**
+  - For `curl`, the broker replaces `X-PROD-KEY` with the real `PROD_API_KEY`, then scrubs that key from stdout/stderr before returning output.
+  - (Extendable to broader PII/credential scrubbing as you add more tools.)
+
+### Threat model notes / non-goals
+
+- **This does not make untrusted code “safe to execute.”** If your build/test process runs arbitrary code, it can still do damage inside the allowed workspace or via allowed network.
+- **Broker is the trust boundary.** Keep the broker allowlist small and inputs strictly validated; do not add “run arbitrary command” functionality.
+- **Repo `.env` files are treated as sensitive by default** for the agent (Pattern A below).
+
 ## File layout
 
 ```text
@@ -40,6 +66,7 @@ Seed the broker with:
 - `PROD_API_KEY`: used to replace `X-PROD-KEY` in `curl` requests
 - `BROKER_ALLOWED_ROOTS`: comma-separated list of directories the broker will accept as `workdir`
   - Recommended: set it to **this repo root** (and any other explicit workspaces you want)
+- `BROKER_SOCK` (optional): override the default socket path (see below)
 
 From the repo root:
 
@@ -77,7 +104,14 @@ Behavior:
 - `mvn` inside the sandbox is intercepted and executed by the broker using host `~/.m2/settings.xml`.
 - `curl` is intercepted **only** if args contain `X-PROD-KEY`; otherwise it runs `/usr/bin/curl` inside the sandbox.
 
-Pattern A note: many projects keep a repo `.env` for humans. This setup keeps that working for you, but the **sandboxed agent is explicitly denied** reading common `.env*` files in the current directory; put high-privilege secrets in the broker env file instead.
+Pattern A note: many projects keep a repo `.env` for humans. This setup keeps that working for you, but the **sandboxed agent is explicitly denied** reading common `.env*` files in the current directory. This avoids the “agent can read repo secrets” trap while preserving normal local dev. Put high-privilege secrets in the broker env file instead.
+
+## Socket path defaults
+
+The broker socket path is chosen per OS (override with `BROKER_SOCK`):
+
+- **macOS**: `~/Library/Application Support/agent-broker/agent-broker.sock`
+- **Linux**: `$XDG_RUNTIME_DIR/agent-broker/agent-broker.sock` (fallback `/tmp/agent-broker/agent-broker.sock`)
 
 ### 3) (Optional) Install interceptors into a dedicated PATH dir
 
