@@ -3,7 +3,7 @@
 This repo provides a **local, high-performance tool-execution split**:
 
 - A **sandboxed agent process** runs with a scrubbed environment and kernel-level filesystem restrictions.
-- For sensitive tools (`mvn`, `curl` when it contains a placeholder key), lightweight **interceptors** forward the request to a **privileged broker** over a **Unix Domain Socket** at `/tmp/agent-broker.sock`.
+- For sensitive tools (`mvn`, `curl` when it contains a placeholder key), lightweight **interceptors** forward the request to a **privileged broker** over a **Unix Domain Socket**.
 - The broker executes the real tool with host privileges, injects secrets, **scrubs sensitive strings** from outputs, and returns safe results.
 
 ## File layout
@@ -25,7 +25,15 @@ This repo provides a **local, high-performance tool-execution split**:
 
 ## Quick start
 
+### 0) One-time setup
+
+```bash
+./bin/setup
+```
+
 ### 1) Start the broker (privileged host process)
+
+The broker loads secrets from an **env file** (default: `~/.config/agent-broker/env`).
 
 Seed the broker with:
 
@@ -36,9 +44,7 @@ Seed the broker with:
 From the repo root:
 
 ```bash
-export PROD_API_KEY="example-prod-key-DO-NOT-USE"
-export BROKER_ALLOWED_ROOTS="$(pwd)"
-
+export BROKER_ENV_FILE="$HOME/.config/agent-broker/env"
 ./bin/broker-daemon start
 ./bin/broker-daemon status
 ```
@@ -70,6 +76,8 @@ Behavior:
 
 - `mvn` inside the sandbox is intercepted and executed by the broker using host `~/.m2/settings.xml`.
 - `curl` is intercepted **only** if args contain `X-PROD-KEY`; otherwise it runs `/usr/bin/curl` inside the sandbox.
+
+Pattern A note: many projects keep a repo `.env` for humans. This setup keeps that working for you, but the **sandboxed agent is explicitly denied** reading common `.env*` files in the current directory; put high-privilege secrets in the broker env file instead.
 
 ### 3) (Optional) Install interceptors into a dedicated PATH dir
 

@@ -10,6 +10,45 @@ LOG_FILE="${PID_DIR}/log.txt"
 
 mkdir -p "$PID_DIR"
 
+default_sock() {
+  local uname_s
+  uname_s="$(uname -s)"
+  case "$uname_s" in
+    Darwin)
+      echo "${HOME}/Library/Application Support/agent-broker/agent-broker.sock"
+      ;;
+    Linux)
+      local rt
+      rt="${XDG_RUNTIME_DIR:-/tmp}"
+      echo "${rt}/agent-broker/agent-broker.sock"
+      ;;
+    *)
+      echo "/tmp/agent-broker/agent-broker.sock"
+      ;;
+  esac
+}
+
+default_env_file() {
+  echo "${HOME}/.config/agent-broker/env"
+}
+
+load_env_file() {
+  local env_file
+  env_file="${BROKER_ENV_FILE:-$(default_env_file)}"
+  if [[ -f "$env_file" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$env_file"
+    set +a
+  fi
+}
+
+ensure_sock_dir() {
+  local sock
+  sock="${BROKER_SOCK:-$(default_sock)}"
+  mkdir -p "$(dirname "$sock")"
+}
+
 ensure_venv() {
   if [[ ! -d "$VENV_DIR" ]]; then
     python3 -m venv "$VENV_DIR"
@@ -38,6 +77,8 @@ case "$cmd" in
       exit 0
     fi
 
+    load_env_file
+    ensure_sock_dir
     ensure_venv
 
     # shellcheck disable=SC2091
@@ -81,6 +122,10 @@ case "$cmd" in
 
   *)
     echo "Usage: $0 {start|stop|status|logs}"
+    echo
+    echo "Environment:"
+    echo "  BROKER_ENV_FILE: path to env file (default: $(default_env_file))"
+    echo "  BROKER_SOCK: socket path (default: $(default_sock))"
     exit 2
     ;;
 esac

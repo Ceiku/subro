@@ -1,7 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SOCK="${BROKER_SOCK:-/tmp/agent-broker.sock}"
+default_sock() {
+  local uname_s
+  uname_s="$(uname -s)"
+  case "$uname_s" in
+    Darwin)
+      echo "${HOME}/Library/Application Support/agent-broker/agent-broker.sock"
+      ;;
+    Linux)
+      local rt
+      rt="${XDG_RUNTIME_DIR:-/tmp}"
+      echo "${rt}/agent-broker/agent-broker.sock"
+      ;;
+    *)
+      echo "/tmp/agent-broker/agent-broker.sock"
+      ;;
+  esac
+}
+
+SOCK="${BROKER_SOCK:-$(default_sock)}"
 WORKDIR="$(pwd)"
 
 # If no placeholder key is present, run curl natively in the sandbox.

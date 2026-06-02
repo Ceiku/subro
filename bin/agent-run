@@ -8,7 +8,25 @@ if [[ $# -lt 1 ]]; then
   exit 2
 fi
 
-SOCK="${BROKER_SOCK:-/tmp/agent-broker.sock}"
+default_sock() {
+  local uname_s
+  uname_s="$(uname -s)"
+  case "$uname_s" in
+    Darwin)
+      echo "${HOME}/Library/Application Support/agent-broker/agent-broker.sock"
+      ;;
+    Linux)
+      local rt
+      rt="${XDG_RUNTIME_DIR:-/tmp}"
+      echo "${rt}/agent-broker/agent-broker.sock"
+      ;;
+    *)
+      echo "/tmp/agent-broker/agent-broker.sock"
+      ;;
+  esac
+}
+
+SOCK="${BROKER_SOCK:-$(default_sock)}"
 WORKDIR="$(pwd)"
 AGENT_HOME="${WORKDIR}/.agent-home"
 mkdir -p "$AGENT_HOME"
@@ -49,6 +67,14 @@ run_macos_sandbox() {
 (allow file-read* file-write* file-read-data file-write-data
   (subpath "${WORKDIR}")
   (literal "${SOCK}"))
+
+; Pattern A: allow repo .env for humans, but deny it to the agent
+(deny file-read*
+  (literal "${WORKDIR}/.env")
+  (literal "${WORKDIR}/.env.local")
+  (literal "${WORKDIR}/.env.development")
+  (literal "${WORKDIR}/.env.test")
+  (literal "${WORKDIR}/.env.production"))
 
 ; Deny sensitive host dirs explicitly (defense-in-depth)
 (deny file-read* file-write*
@@ -91,6 +117,11 @@ run_linux_landlock() {
     landlock-restrict \
       --allow-read-write "$WORKDIR" \
       --allow-read-write "$(dirname "$SOCK")" \
+      --deny-read-write "$WORKDIR/.env" \
+      --deny-read-write "$WORKDIR/.env.local" \
+      --deny-read-write "$WORKDIR/.env.development" \
+      --deny-read-write "$WORKDIR/.env.test" \
+      --deny-read-write "$WORKDIR/.env.production" \
       --deny-read-write "$HOME/.ssh" \
       --deny-read-write "$HOME/.m2" \
       -- "$@"

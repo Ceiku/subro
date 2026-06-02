@@ -15,7 +15,16 @@ from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field, ValidationError
 
 
-SOCK_PATH = Path(os.environ.get("BROKER_SOCK", "/tmp/agent-broker.sock"))
+def _default_sock_path() -> Path:
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "agent-broker" / "agent-broker.sock"
+    if sys.platform.startswith("linux"):
+        rt = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
+        return Path(rt) / "agent-broker" / "agent-broker.sock"
+    return Path("/tmp/agent-broker/agent-broker.sock")
+
+
+SOCK_PATH = Path(os.environ.get("BROKER_SOCK", str(_default_sock_path())))
 
 
 class BrokerRequest(BaseModel):
@@ -198,6 +207,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
 
 
 async def run_server() -> None:
+    SOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
     if SOCK_PATH.exists():
         try:
             SOCK_PATH.unlink()

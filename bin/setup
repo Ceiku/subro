@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+default_sock() {
+  local uname_s
+  uname_s="$(uname -s)"
+  case "$uname_s" in
+    Darwin)
+      echo "${HOME}/Library/Application Support/agent-broker/agent-broker.sock"
+      ;;
+    Linux)
+      local rt
+      rt="${XDG_RUNTIME_DIR:-/tmp}"
+      echo "${rt}/agent-broker/agent-broker.sock"
+      ;;
+    *)
+      echo "/tmp/agent-broker/agent-broker.sock"
+      ;;
+  esac
+}
+
+BROKER_ENV_FILE="${BROKER_ENV_FILE:-${HOME}/.config/agent-broker/env}"
+BROKER_SOCK="${BROKER_SOCK:-$(default_sock)}"
+
+mkdir -p "$(dirname "$BROKER_ENV_FILE")"
+mkdir -p "$(dirname "$BROKER_SOCK")"
+
+if [[ ! -f "$BROKER_ENV_FILE" ]]; then
+  cat >"$BROKER_ENV_FILE" <<EOF
+# Broker-only environment. Keep this file private (chmod 600).
+#
+# Required for curl placeholder mutation:
+#   PROD_API_KEY=...
+#
+# Restrict what workdirs the broker will execute inside:
+#   BROKER_ALLOWED_ROOTS="\$HOME/dev,\$HOME/work"
+#
+# Optional: override socket path:
+#   BROKER_SOCK="$(default_sock)"
+EOF
+  chmod 600 "$BROKER_ENV_FILE" || true
+  echo "Created: $BROKER_ENV_FILE"
+else
+  echo "Exists:  $BROKER_ENV_FILE"
+fi
+
+chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/{agent-run,broker-daemon,install-interceptors} 2>/dev/null || true
+chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/interceptors/{mvn,curl} 2>/dev/null || true
+
+echo
+echo "Next steps:"
+echo "1) Edit broker env file: $BROKER_ENV_FILE"
+echo "2) Start broker: BROKER_ENV_FILE=\"$BROKER_ENV_FILE\" ./bin/broker-daemon start"
+echo "3) Run sandboxed command: ./bin/agent-run <your-cli>"
+
