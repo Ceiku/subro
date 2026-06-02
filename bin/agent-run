@@ -109,12 +109,17 @@ run_macos_sandbox() {
 EOF
 )"
 
-  exec env -i \
+  env -i \
     PATH="$SANDBOX_PATH" \
     HOME="$AGENT_HOME" \
     TMPDIR="/tmp" \
     BROKER_SOCK="$SOCK" \
     sandbox-exec -p "$profile" -- "$@"
+  rc=$?
+  if [[ $rc -ne 0 ]]; then
+    echo "sandbox-exec failed (exit $rc). You may need to run from a normal host terminal, or set SUBRO_NO_SANDBOX=1 to run without kernel sandboxing." >&2
+  fi
+  exit "$rc"
 }
 
 run_linux_landlock() {
@@ -126,7 +131,7 @@ run_linux_landlock() {
   # landlock-restrict policy:
   # - allow full access to current workdir + socket
   # - deny sensitive host dirs (best-effort, depends on landlock-restrict implementation)
-  exec env -i \
+  env -i \
     PATH="$SANDBOX_PATH" \
     HOME="$AGENT_HOME" \
     TMPDIR="/tmp" \
@@ -153,11 +158,19 @@ run_linux_landlock() {
       --deny-read-write "$HOME/.pip" \
       --deny-read-write "$HOME/.netrc" \
       -- "$@"
+  rc=$?
+  if [[ $rc -ne 0 ]]; then
+    echo "landlock-restrict failed (exit $rc). You may need to install/configure Landlock, or set SUBRO_NO_SANDBOX=1 to run without kernel sandboxing." >&2
+  fi
+  exit "$rc"
 }
 
 uname_s="$(uname -s)"
 case "$uname_s" in
   Darwin)
+    if [[ "${SUBRO_NO_SANDBOX:-}" == "1" ]]; then
+      run_unsandboxed "$@"
+    fi
     if command -v sandbox-exec >/dev/null 2>&1; then
       run_macos_sandbox "$@"
     fi
@@ -165,6 +178,9 @@ case "$uname_s" in
     run_unsandboxed "$@"
     ;;
   Linux)
+    if [[ "${SUBRO_NO_SANDBOX:-}" == "1" ]]; then
+      run_unsandboxed "$@"
+    fi
     run_linux_landlock "$@"
     ;;
   *)
