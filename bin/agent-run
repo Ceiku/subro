@@ -45,8 +45,12 @@ run_unsandboxed() {
 }
 
 run_macos_sandbox() {
-  local profile_file
+  local profile_file macos_user_temp
   profile_file="$(mktemp "${TMPDIR:-/tmp}/subro-seatbelt.XXXXXX")"
+  macos_user_temp=""
+  if command -v getconf >/dev/null 2>&1; then
+    macos_user_temp="$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || true)"
+  fi
   # Seatbelt: broad read + scoped write + explicit denies (invalid ops like
   # process* / file-read-data cause sandbox-exec to abort on macOS).
   cat >"$profile_file" <<EOF
@@ -59,6 +63,7 @@ run_macos_sandbox() {
 (allow mach-lookup)
 (allow file-read*)
 (allow file-write* (subpath "/tmp"))
+(allow file-write* (subpath "/private/var/folders"))
 (allow file-write* (subpath "/dev"))
 (allow file-write* (subpath "${WORKDIR}"))
 (allow file-write* (literal "${SOCK}"))
@@ -88,6 +93,9 @@ run_macos_sandbox() {
 (deny file-read* (literal "${HOME}/.zprofile"))
 (deny file-read* (literal "${HOME}/.zshenv"))
 EOF
+  if [[ -n "$macos_user_temp" ]]; then
+    printf '\n(allow file-write* (subpath "%s"))\n' "$macos_user_temp" >>"$profile_file"
+  fi
 
   env -i \
     PATH="$SANDBOX_PATH" \
@@ -97,7 +105,6 @@ EOF
     sandbox-exec -f "$profile_file" -- "$@"
   rc=$?
   rm -f "$profile_file"
-  rc=$?
   if [[ $rc -ne 0 ]]; then
     echo "sandbox-exec failed (exit $rc). You may need to run from a normal host terminal, or set SUBRO_NO_SANDBOX=1 to run without kernel sandboxing." >&2
   fi

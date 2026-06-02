@@ -35,7 +35,10 @@ if [[ "$has_placeholder" -eq 0 ]]; then
   exec /usr/bin/curl "$@"
 fi
 
-python3 - "$SOCK" "$WORKDIR" "$@" <<'PY'
+export TMPDIR="${TMPDIR:-/tmp}"
+export PYTHONDONTWRITEBYTECODE=1
+
+exec env TMPDIR="$TMPDIR" PYTHONDONTWRITEBYTECODE=1 python3 - "$SOCK" "$WORKDIR" "$@" <<'PY'
 import json
 import socket
 import sys

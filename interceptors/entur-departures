@@ -22,7 +22,10 @@ default_sock() {
 SOCK="${BROKER_SOCK:-$(default_sock)}"
 WORKDIR="$(pwd)"
 
-python3 - "$SOCK" "$WORKDIR" "$@" <<'PY'
+export TMPDIR="${TMPDIR:-/tmp}"
+export PYTHONDONTWRITEBYTECODE=1
+
+exec env TMPDIR="$TMPDIR" PYTHONDONTWRITEBYTECODE=1 python3 - "$SOCK" "$WORKDIR" "$@" <<'PY'
 import json
 import socket
 import sys
