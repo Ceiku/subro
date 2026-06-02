@@ -35,13 +35,30 @@ INTERCEPTORS_DIR="${ROOT}/interceptors"
 
 SANDBOX_PATH="${INTERCEPTORS_DIR}:/usr/bin:/bin:/usr/sbin:/sbin"
 
-run_unsandboxed() {
-  exec env -i \
+load_broker_env() {
+  local env_file="${BROKER_ENV_FILE:-${HOME}/.config/agent-broker/env}"
+  if [[ -f "$env_file" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$env_file"
+    set +a
+  fi
+}
+
+load_broker_env
+
+sandbox_env() {
+  env -i \
     PATH="$SANDBOX_PATH" \
     HOME="$AGENT_HOME" \
     TMPDIR="/tmp" \
     BROKER_SOCK="$SOCK" \
+    ${BROKER_SOCKET_TOKEN:+BROKER_SOCKET_TOKEN="$BROKER_SOCKET_TOKEN"} \
     "$@"
+}
+
+run_unsandboxed() {
+  exec sandbox_env "$@"
 }
 
 run_macos_sandbox() {
@@ -61,6 +78,8 @@ run_macos_sandbox() {
 (allow signal)
 (allow sysctl-read)
 (allow mach-lookup)
+; Read allowlist tightening (P2.3): global read + explicit denies below.
+; Narrow subpath-only reads break bash/python on macOS in practice.
 (allow file-read*)
 (allow file-write* (subpath "/tmp"))
 (allow file-write* (subpath "/private/var/folders"))
@@ -97,12 +116,7 @@ EOF
     printf '\n(allow file-write* (subpath "%s"))\n' "$macos_user_temp" >>"$profile_file"
   fi
 
-  env -i \
-    PATH="$SANDBOX_PATH" \
-    HOME="$AGENT_HOME" \
-    TMPDIR="/tmp" \
-    BROKER_SOCK="$SOCK" \
-    sandbox-exec -f "$profile_file" -- "$@"
+  sandbox_env sandbox-exec -f "$profile_file" -- "$@"
   rc=$?
   rm -f "$profile_file"
   if [[ $rc -ne 0 ]]; then
@@ -120,12 +134,7 @@ run_linux_landlock() {
   # landlock-restrict policy:
   # - allow full access to current workdir + socket
   # - deny sensitive host dirs (best-effort, depends on landlock-restrict implementation)
-  env -i \
-    PATH="$SANDBOX_PATH" \
-    HOME="$AGENT_HOME" \
-    TMPDIR="/tmp" \
-    BROKER_SOCK="$SOCK" \
-    landlock-restrict \
+  sandbox_env landlock-restrict \
       --allow-read-write "$WORKDIR" \
       --allow-read-write "$(dirname "$SOCK")" \
       --deny-read-write "$WORKDIR/.env" \

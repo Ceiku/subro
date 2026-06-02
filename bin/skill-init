@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() {
+  echo "Usage: $0 <skill-name>" >&2
+  echo "  skill-name: lowercase letters, digits, hyphens (e.g. prod-logs)" >&2
+  exit 2
+}
+
+NAME="${1:-}"
+[[ -n "$NAME" ]] || usage
+if [[ ! "$NAME" =~ ^[a-z][a-z0-9-]*$ ]]; then
+  echo "Invalid skill name: $NAME" >&2
+  exit 2
+fi
+
+MODULE="${NAME//-/_}"
+SKILL_PY="${ROOT}/broker/skills/${MODULE}.py"
+INTERCEPTOR="${ROOT}/interceptors/${NAME}"
+SKILL_MD="${ROOT}/skills/${NAME}/SKILL.md"
+
+if [[ -e "$SKILL_PY" || -e "$INTERCEPTOR" ]]; then
+  echo "Skill already exists: $NAME" >&2
+  exit 1
+fi
+
+mkdir -p "${ROOT}/skills/${NAME}"
+
+cat >"$SKILL_PY" <<EOF
+#!/usr/bin/env python3
+"""Broker skill: ${NAME}"""
+from __future__ import annotations
+
+from typing import List, Tuple
+
+TOOL_NAME = "${NAME}"
+
+
+def run(args: List[str]) -> Tuple[int, str, str, List[str]]:
+    if not args or args[0] in ("-h", "--help"):
+        return 0, f"Usage: {TOOL_NAME} <args...>\\n", "", []
+
+    # TODO: validate args, call APIs, scrub secrets before return
+    return 2, "", "not implemented\\n", []
+EOF
+
+cat >"$INTERCEPTOR" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+exec env TMPDIR="\${TMPDIR:-/tmp}" PYTHONDONTWRITEBYTECODE=1 \\
+  python3 "\${DIR}/_broker_call.py" ${NAME} "\$@"
+EOF
+chmod +x "$INTERCEPTOR"
+
+cat >"$SKILL_MD" <<EOF
+---
+name: ${NAME}
+description: TODO — describe when the agent should use this tool.
+---
+
+# ${NAME}
+
+Run:
+
+\`\`\`bash
+${NAME} <args>
+\`\`\`
+
+Do not use raw \`curl\` for this integration; use the \`${NAME}\` command only.
+EOF
+
+chmod +x "${ROOT}/interceptors/_broker_call.py" 2>/dev/null || true
+
+echo "Created skill '${NAME}':"
+echo "  broker/skills/${MODULE}.py"
+echo "  interceptors/${NAME}"
+echo "  skills/${NAME}/SKILL.md"
+echo
+echo "Next:"
+echo "  1) Implement run() in broker/skills/${MODULE}.py"
+echo "  2) ./bin/broker-daemon stop && ./bin/broker-daemon start"
+echo "  3) ./bin/doctor"

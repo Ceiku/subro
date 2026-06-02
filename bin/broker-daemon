@@ -79,6 +79,10 @@ case "$cmd" in
 
     load_env_file
     ensure_sock_dir
+    sock="${BROKER_SOCK:-$(default_sock)}"
+    if [[ -S "$sock" ]]; then
+      rm -f "$sock"
+    fi
     ensure_venv
 
     # shellcheck disable=SC2091

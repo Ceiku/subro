@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Single entrypoint: ensure broker is up, then run a CLI inside the sandbox.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BROKER_ENV_FILE="${BROKER_ENV_FILE:-${HOME}/.config/agent-broker/env}"
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 <command> [args...]" >&2
+  echo "Example: $0 pi.dev" >&2
+  echo "         $0 bash" >&2
+  exit 2
+fi
+
+if [[ -f "$BROKER_ENV_FILE" ]]; then
+  export BROKER_ENV_FILE
+fi
+
+"$ROOT/bin/broker-daemon" start >/dev/null 2>&1 || true
+exec "$ROOT/bin/agent-run" "$@"

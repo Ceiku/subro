@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+FAIL=0
+
+ok() { echo "  OK: $*"; }
+warn() { echo "  WARN: $*"; }
+bad() { echo "  FAIL: $*"; FAIL=1; }
+
+default_sock() {
+  case "$(uname -s)" in
+    Darwin) echo "${HOME}/Library/Application Support/agent-broker/agent-broker.sock" ;;
+    Linux) echo "${XDG_RUNTIME_DIR:-/tmp}/agent-broker/agent-broker.sock" ;;
+    *) echo "/tmp/agent-broker/agent-broker.sock" ;;
+  esac
+}
+
+BROKER_ENV_FILE="${BROKER_ENV_FILE:-${HOME}/.config/agent-broker/env}"
+if [[ -f "$BROKER_ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$BROKER_ENV_FILE"
+  set +a
+fi
+
+SOCK="${BROKER_SOCK:-$(default_sock)}"
+
+echo "== subro doctor =="
+echo
+
+echo "1) Broker daemon"
+if "$ROOT/bin/broker-daemon" status >/dev/null 2>&1; then
+  ok "broker running"
+else
+  bad "broker not running (./bin/broker-daemon start)"
+fi
+
+echo "2) Socket"
+if [[ -S "$SOCK" ]]; then
+  ok "socket exists: $SOCK"
+else
+  bad "socket missing: $SOCK"
+fi
+
+echo "3) Broker env"
+if [[ -f "$BROKER_ENV_FILE" ]]; then
+  ok "env file: $BROKER_ENV_FILE"
+else
+  warn "no env file (run ./bin/setup)"
+fi
+if [[ -n "${BROKER_ALLOWED_ROOTS:-}" ]]; then
+  ok "BROKER_ALLOWED_ROOTS=${BROKER_ALLOWED_ROOTS}"
+else
+  warn "BROKER_ALLOWED_ROOTS unset (broker defaults to its cwd)"
+fi
+if [[ -n "${BROKER_SOCKET_TOKEN:-}" ]]; then
+  ok "BROKER_SOCKET_TOKEN is set"
+else
+  warn "BROKER_SOCKET_TOKEN unset (optional; run ./bin/setup)"
+fi
+
+echo "4) Registered tools (broker log)"
+if [[ -f "$ROOT/.broker/log.txt" ]]; then
+  if grep -q "tools:" "$ROOT/.broker/log.txt" 2>/dev/null; then
+    grep "tools:" "$ROOT/.broker/log.txt" | tail -1 | sed 's/^/  /'
+  else
+    warn "restart broker to refresh tool list in logs"
+  fi
+fi
+
+echo "5) UDS ping (entur-departures --help via broker)"
+if [[ -S "$SOCK" ]]; then
+  export BROKER_SOCK="$SOCK"
+  if "$ROOT/interceptors/entur-departures" --help >/dev/null 2>&1; then
+    ok "broker responded to entur-departures --help"
+  else
+    bad "broker call failed (check BROKER_ALLOWED_ROOTS includes $(pwd))"
+  fi
+else
+  bad "skipped (no socket)"
+fi
+
+echo "6) Sandbox smoke"
+if "$ROOT/bin/agent-run" bash -lc 'echo sandbox-ok' >/dev/null 2>&1; then
+  ok "agent-run sandbox executes"
+else
+  bad "agent-run failed (try SUBRO_NO_SANDBOX=1 for diagnosis)"
+fi
+
+echo "7) Interceptors on PATH"
+if "$ROOT/bin/agent-run" bash -lc 'command -v mvn | grep -q interceptors'; then
+  ok "mvn resolves to interceptor"
+else
+  warn "mvn interceptor not first in PATH"
+fi
+
+echo
+if [[ "$FAIL" -eq 0 ]]; then
+  echo "All checks passed."
+  exit 0
+fi
+echo "Some checks failed."
+exit 1

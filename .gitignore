@@ -2,3 +2,8 @@
 broker/.venv/
 .agent-home/
 .agent-path/
+.env
+.env.*
+.npmrc
+.pypirc
+.netrc
