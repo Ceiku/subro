@@ -14,6 +14,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field, ValidationError
 
+from entur import run_entur_departures
+
 
 def _default_sock_path() -> Path:
     if sys.platform == "darwin":
@@ -100,14 +102,20 @@ def _run_tool(
 
     if tool == "mvn":
         cmd = ["mvn", *args]
-        # mvn will naturally read ~/.m2/settings.xml based on HOME.
         env = os.environ.copy()
         env.pop("BASH_ENV", None)
         env.pop("ENV", None)
-        # Use host HOME; keep execution privileged here (broker side).
         env["HOME"] = str(Path.home())
-        # Avoid leaking sensitive env vars to subprocess.
         env.pop("PROD_API_KEY", None)
+        proc = subprocess.run(
+            cmd,
+            cwd=str(workdir),
+            env=env,
+            shell=False,
+            capture_output=True,
+            text=True,
+        )
+        return proc.returncode, proc.stdout or "", proc.stderr or "", secrets_to_scrub
 
     elif tool == "curl":
         cmd_args = list(args)
@@ -117,22 +125,25 @@ def _run_tool(
         cmd = ["/usr/bin/curl", *cmd_args]
         env = os.environ.copy()
         env.pop("PROD_API_KEY", None)
+
+        proc = subprocess.run(
+            cmd,
+            cwd=str(workdir),
+            env=env,
+            shell=False,
+            capture_output=True,
+            text=True,
+        )
+        stdout = proc.stdout or ""
+        stderr = proc.stderr or ""
+        return proc.returncode, stdout, stderr, secrets_to_scrub
+
+    elif tool == "entur-departures":
+        code, stdout, stderr = run_entur_departures(args)
+        return code, stdout, stderr, secrets_to_scrub
+
     else:
         raise ValueError(f"unsupported tool: {tool}")
-
-    proc = subprocess.run(
-        cmd,
-        cwd=str(workdir),
-        env=env,
-        shell=False,
-        capture_output=True,
-        text=True,
-    )
-
-    stdout = proc.stdout or ""
-    stderr = proc.stderr or ""
-
-    return proc.returncode, stdout, stderr, secrets_to_scrub
 
 
 async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:

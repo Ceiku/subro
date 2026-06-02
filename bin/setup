@@ -37,6 +37,9 @@ if [[ ! -f "$BROKER_ENV_FILE" ]]; then
 #
 # Optional: override socket path:
 #   BROKER_SOCK="$(default_sock)"
+#
+# Optional: Entur showcase skill client name (public API):
+#   ENTUR_CLIENT_NAME=subro-yourname
 EOF
   chmod 600 "$BROKER_ENV_FILE" || true
   echo "Created: $BROKER_ENV_FILE"
@@ -45,7 +48,7 @@ else
 fi
 
 chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/{agent-run,broker-daemon,install-interceptors} 2>/dev/null || true
-chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/interceptors/{mvn,curl} 2>/dev/null || true
+chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/interceptors/{mvn,curl,entur-departures} 2>/dev/null || true
 
 echo
 echo "Next steps:"

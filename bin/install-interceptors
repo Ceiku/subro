@@ -8,6 +8,7 @@ mkdir -p "$TARGET"
 
 ln -sf "${ROOT}/interceptors/mvn" "${TARGET}/mvn"
 ln -sf "${ROOT}/interceptors/curl" "${TARGET}/curl"
+ln -sf "${ROOT}/interceptors/entur-departures" "${TARGET}/entur-departures"
 
 echo "Installed interceptor symlinks into: $TARGET"
 echo "You can prepend it to PATH, or rely on bin/agent-run which already prefers ./interceptors."

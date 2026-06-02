@@ -45,10 +45,30 @@ This is designed for running CLI-based coding agents safely in hostile condition
 ├── broker/
 │   ├── main.py
 │   └── requirements.txt
-└── interceptors/
-    ├── mvn
-    └── curl
+├── interceptors/
+│   ├── mvn
+│   ├── curl
+│   └── entur-departures
+└── skills/
+    └── entur-departures/
+        └── SKILL.md
 ```
+
+## Showcase skill: Entur departures (read-only API)
+
+Demonstrates a **broker-guarded API skill**: the agent calls a normal CLI, but the broker enforces an allowlist and fixed query shape (no arbitrary HTTP/GraphQL from the sandbox).
+
+```bash
+./bin/agent-run bash -lc 'entur-departures jernbanetorget'
+./bin/agent-run bash -lc 'entur-departures nationaltheatret 8'
+./bin/agent-run bash -lc 'entur-departures oslo-s'
+```
+
+**Allowed stops only:** `jernbanetorget`, `nationaltheatret`, `oslo-s` (lookup/read-only; broker uses Entur’s public Journey Planner API with a fixed departure query).
+
+Optional broker env: `ENTUR_CLIENT_NAME=subro-yourname` (defaults to `subro-agent-broker`).
+
+Agent instructions: `skills/entur-departures/SKILL.md`.
 
 ## Quick start
 
