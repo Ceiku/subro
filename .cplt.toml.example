@@ -1,0 +1,18 @@
+# Optional per-repo cplt overrides when SUBRO_SANDBOX=cplt is set in ~/.config/agent-broker/env.
+# Copy to .cplt.toml and adjust. See docs/cplt.md.
+#
+# Broker UDS access is configured automatically by ./bin/agent-run (--allow-write on the
+# socket directory). You only need this file for extra project-specific permissions.
+
+[deny]
+# Tighten beyond cplt defaults (optional)
+# paths = ["~/extra-secrets"]
+
+[propose]
+# Permissions that require: cplt trust accept --all
+# allow_localhost_any = true   # Next.js / Vite ephemeral ports
+# allow_jvm_attach = true      # MockK / Mockito inline
+
+[propose.allow]
+# localhost = [3000, 8080]
+# ports = [5432]

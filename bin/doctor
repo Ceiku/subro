@@ -60,7 +60,46 @@ if [[ -f "$ROOT/.broker/log.txt" ]]; then
   fi
 fi
 
-echo "5) Host broker ping (outside sandbox)"
+echo "5) Sandbox backend"
+SANDBOX_BACKEND="$(subro_sandbox_backend)"
+if [[ "$SANDBOX_BACKEND" == "cplt" ]]; then
+  ok "SUBRO_SANDBOX=cplt (navikt/cplt — optional MIT dependency)"
+  if subro_cplt_available; then
+    ok "cplt on PATH ($(cplt --version 2>/dev/null || echo unknown))"
+  else
+    warn "cplt not on PATH (agent-run falls back to native; brew install navikt/tap/cplt)"
+  fi
+else
+  ok "SUBRO_SANDBOX=native (Seatbelt / Landlock)"
+  if subro_cplt_available; then
+    warn "cplt installed but unused (set SUBRO_SANDBOX=cplt in broker env to enable)"
+  fi
+fi
+
+echo "6) Kernel sandbox (native backend)"
+case "$(uname -s)" in
+  Darwin)
+    if command -v sandbox-exec >/dev/null 2>&1; then
+      ok "sandbox-exec available (Seatbelt)"
+    else
+      warn "sandbox-exec not found (SUBRO_NO_SANDBOX=1 fallback)"
+    fi
+    ;;
+  Linux)
+    landlock_line="$(subro_landlock_status "$ROOT" 2>&1)" || landlock_rc=$?
+    landlock_rc="${landlock_rc:-0}"
+    if [[ "$landlock_rc" -eq 0 ]]; then
+      ok "Landlock: $landlock_line"
+    else
+      warn "Landlock: $landlock_line"
+    fi
+    ;;
+  *)
+    warn "unsupported OS for kernel sandbox: $(uname -s)"
+    ;;
+esac
+
+echo "7) Host broker ping (outside sandbox)"
 if [[ -S "$SOCK" ]]; then
   export BROKER_SOCK="$SOCK"
   if "$ROOT/interceptors/entur-departures" --help >/dev/null 2>&1; then
@@ -72,35 +111,35 @@ else
   bad "skipped (no socket)"
 fi
 
-echo "6) In-sandbox broker UDS (entur-departures --help)"
+echo "8) In-sandbox broker UDS (entur-departures --help)"
 if "$ROOT/bin/agent-run" bash -lc 'entur-departures --help >/dev/null' 2>/dev/null; then
   ok "sandbox can reach broker via UDS"
 else
   bad "in-sandbox broker call failed (broker down, token mismatch, or Seatbelt socket deny)"
 fi
 
-echo "7) In-sandbox entur-departures smoke"
+echo "9) In-sandbox entur-departures smoke"
 if "$ROOT/bin/agent-run" bash -lc 'entur-departures jernbanetorget 1 >/dev/null' 2>/dev/null; then
   ok "sandbox entur-departures returned data"
 else
   warn "entur smoke call failed (network/API or broker policy; --help test above is the critical check)"
 fi
 
-echo "8) Sandbox shell smoke"
+echo "10) Sandbox shell smoke"
 if "$ROOT/bin/agent-run" bash -lc 'echo sandbox-ok' >/dev/null 2>&1; then
   ok "agent-run sandbox executes"
 else
   bad "agent-run failed (try SUBRO_NO_SANDBOX=1 for diagnosis)"
 fi
 
-echo "9) Interceptors on PATH"
+echo "11) Interceptors on PATH"
 if "$ROOT/bin/agent-run" bash -lc 'command -v mvn | grep -q interceptors'; then
   ok "mvn resolves to interceptor"
 else
   warn "mvn interceptor not first in PATH"
 fi
 
-echo "10) pi harness (optional)"
+echo "12) pi harness (optional)"
 if command -v pi >/dev/null 2>&1; then
   if subro_prepare_pi_shims "$CWD" >/dev/null 2>&1; then
     ok "pi + node shims ready in .agent-bin/"
@@ -111,7 +150,7 @@ else
   warn "pi not on PATH (optional; npm i -g @earendil-works/pi-coding-agent)"
 fi
 
-echo "11) opencode harness (optional)"
+echo "13) opencode harness (optional)"
 if command -v opencode >/dev/null 2>&1; then
   if subro_prepare_opencode_shims "$CWD" >/dev/null 2>&1; then
     ok "opencode shims ready in .agent-bin/"

@@ -205,6 +205,17 @@ if [[ "${1:-}" == "opencode" ]]; then
   subro_export_opencode_harness_env "$HOME"
 fi
 
+SANDBOX_BACKEND="$(subro_sandbox_backend)"
+
+if [[ "${SUBRO_NO_SANDBOX:-}" != "1" && "$SANDBOX_BACKEND" == "cplt" ]]; then
+  if subro_cplt_available; then
+    subro_run_cplt_sandbox "$SANDBOX_PATH" "$SOCK" "$ROOT" "$@"
+    exit $?
+  fi
+  echo "SUBRO_SANDBOX=cplt but cplt not found; falling back to native sandbox." >&2
+  echo "  Install: brew install navikt/tap/cplt  (see docs/cplt.md)" >&2
+fi
+
 uname_s="$(uname -s)"
 case "$uname_s" in
   Darwin)

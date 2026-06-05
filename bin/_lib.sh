@@ -169,6 +169,52 @@ subro_landlock_restrict_bin() {
   command -v landlock-restrict 2>/dev/null || true
 }
 
+# Sandbox backend: native (Seatbelt/Landlock) or optional external cplt (MIT).
+# Set SUBRO_SANDBOX in ~/.config/agent-broker/env. Default: native.
+subro_sandbox_backend() {
+  local b="${SUBRO_SANDBOX:-native}"
+  case "$b" in
+    native | cplt) printf '%s' "$b" ;;
+    *)
+      echo "subro: unknown SUBRO_SANDBOX=${b}; using native" >&2
+      printf 'native'
+      ;;
+  esac
+}
+
+subro_cplt_available() {
+  command -v cplt >/dev/null 2>&1
+}
+
+# Run the agent command under navikt/cplt (external binary). Caller exports harness
+# env vars before invoking. Does not nest with native Seatbelt/Landlock.
+subro_run_cplt_sandbox() {
+  local sandbox_path="$1"
+  local sock="$2"
+  local root="$3"
+  shift 3
+
+  local sock_dir
+  sock_dir="$(dirname "$sock")"
+  local -a cplt_args=(--agent shell -y --allow-write "$sock_dir")
+
+  export PATH="$sandbox_path"
+  export BROKER_SOCK="$sock"
+  export SUBRO_ROOT="$root"
+
+  cplt_args+=(--pass-env PATH --pass-env BROKER_SOCK --pass-env SUBRO_ROOT)
+  [[ -n "${BROKER_SOCKET_TOKEN:-}" ]] && cplt_args+=(--pass-env BROKER_SOCKET_TOKEN)
+  [[ -n "${PI_CODING_AGENT_DIR:-}" ]] && cplt_args+=(--pass-env PI_CODING_AGENT_DIR)
+  [[ -n "${PI_CODING_AGENT_SESSION_DIR:-}" ]] && cplt_args+=(--pass-env PI_CODING_AGENT_SESSION_DIR)
+  [[ -n "${OPENCODE_CONFIG_DIR:-}" ]] && cplt_args+=(--pass-env OPENCODE_CONFIG_DIR)
+  [[ -n "${OPENCODE_DATA_DIR:-}" ]] && cplt_args+=(--pass-env OPENCODE_DATA_DIR)
+  [[ -n "${OPENCODE_CACHE_DIR:-}" ]] && cplt_args+=(--pass-env OPENCODE_CACHE_DIR)
+  [[ -n "${OPENCODE_STATE_DIR:-}" ]] && cplt_args+=(--pass-env OPENCODE_STATE_DIR)
+  [[ -n "${OPENCODE_CONFIG:-}" ]] && cplt_args+=(--pass-env OPENCODE_CONFIG)
+
+  cplt "${cplt_args[@]}" -- "$@"
+}
+
 # Print one-line Landlock status for doctor/setup. Returns 0 when usable.
 subro_landlock_status() {
   local root="${1:-}"
