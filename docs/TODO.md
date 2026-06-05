@@ -48,6 +48,7 @@ Status legend: `done` | `partial` | `todo`
 | P3.11 | Broker lifecycle docs + stale socket/pid | done | `broker-daemon status`, README |
 | P3.12 | First-class `./bin/agent opencode` integration | done | shims, `OPENCODE_*_DIR`, `--global-opencode` |
 | P3.13 | Harness sandbox write allowlist (pi/opencode host dirs) | done | `~/.pi/agent`, `OPENCODE_*` dirs writable in harness modes |
+| P3.14 | Pi loopback bind in Seatbelt (TUI / print mode) | done | `network-bind` + inbound on `localhost:*`, pi mode only |
 
 ## P4 — Future (from planning doc)
 

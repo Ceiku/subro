@@ -134,6 +134,16 @@ subro_append_seatbelt_harness_writes() {
   done < <(subro_harness_write_paths "$harness")
 }
 
+# Pi bootstraps a loopback control plane (e.g. pi-cursor-provider). Pi mode only.
+subro_append_seatbelt_pi_loopback() {
+  local profile_file="${1:?}"
+  cat >>"$profile_file" <<'EOF'
+(allow network-bind (local ip "localhost:*"))
+(allow network-inbound (local ip "localhost:*"))
+(allow network-outbound (remote ip "localhost:*"))
+EOF
+}
+
 # Point OpenCode at the real harness dirs (sandbox uses a fake HOME).
 subro_export_opencode_harness_env() {
   local real_home="${1:-$HOME}"

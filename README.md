@@ -117,6 +117,7 @@ The sandbox sets `HOME` to `./.agent-home`, so harnesses that store config under
 |---------|--------|-----|
 | **pi** | fake `HOME` hides `~/.pi/agent` | `PI_CODING_AGENT_DIR` (automatic via `./bin/agent pi`) |
 | **pi** | locks/sessions under `~/.pi/agent` | Seatbelt/Landlock write allowlist for that dir in pi mode |
+| **pi** | loopback server at startup (TUI, `-p`, `--help`) | Seatbelt `network-bind` on `localhost` in pi mode only |
 | **pi** | `pi` / `node` not on sandbox `PATH` | shims in `./.agent-bin/` |
 | **OpenCode** | fake `HOME` hides `~/.config/opencode` and `~/.local/share/opencode` | `OPENCODE_CONFIG_DIR`, `OPENCODE_DATA_DIR`, etc. (automatic via `./bin/agent opencode`) |
 | **OpenCode** | global skills not in project `.opencode/` | `./bin/skills-sync --global-opencode` → `~/.config/opencode/skills/` |
