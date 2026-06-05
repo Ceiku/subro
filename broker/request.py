@@ -59,8 +59,6 @@ def process_request(raw: Dict[str, Any]) -> BrokerResponse:
         audit_event(tool=req.tool, args=req.args, workdir=req.workdir, exit_code=2, ok=False, error=str(e))
         return BrokerResponse(ok=False, exit_code=2, stdout="", stderr=f"{e}\n")
 
-    prod_api_key = os.environ.get("PROD_API_KEY")
-
     if req.tool == "register-skill":
         if req.register_skill is None:
             return BrokerResponse(
@@ -87,7 +85,7 @@ def process_request(raw: Dict[str, Any]) -> BrokerResponse:
         )
 
     try:
-        code, stdout, stderr, ok = dispatch_scrubbed(req.tool, req.args, wd, prod_api_key)
+        code, stdout, stderr, ok = dispatch_scrubbed(req.tool, req.args, wd, None)
     except ValueError as e:
         audit_event(tool=req.tool, args=req.args, workdir=str(wd), exit_code=2, ok=False, error=str(e))
         return BrokerResponse(ok=False, exit_code=2, stdout="", stderr=f"{e}\n")

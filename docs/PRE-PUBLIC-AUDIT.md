@@ -13,7 +13,7 @@
 | Broker logs / PID (`.broker/`) | Not tracked |
 | `broker/.venv/` | Not tracked |
 | Local skill symlinks (`.cursor/skills`, etc.) | Not tracked |
-| Hardcoded secrets in code | Only placeholders (`X-PROD-KEY`) and scrub patterns |
+| Hardcoded secrets in code | Only `$VAR` substitution patterns and scrub regexes |
 
 ## Git history — CLEAN (post-scrub)
 

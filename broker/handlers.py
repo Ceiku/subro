@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
+from curl_env import substitute_curl_args
 from register import load_registered, run_registered_skill
 from scrub import scrub_all
 
@@ -40,13 +41,10 @@ def _run_mvn(args: List[str], workdir: Path, prod_api_key: Optional[str]) -> Tup
 
 
 def _run_curl(args: List[str], workdir: Path, prod_api_key: Optional[str]) -> Tuple[int, str, str, List[str]]:
-    secrets: List[str] = []
-    cmd_args = list(args)
-    if prod_api_key and any("X-PROD-KEY" in a for a in cmd_args):
-        cmd_args = [a.replace("X-PROD-KEY", prod_api_key) for a in cmd_args]
-        secrets.append(prod_api_key)
+    cmd_args, secrets, substituted = substitute_curl_args(args)
     env = os.environ.copy()
-    env.pop("PROD_API_KEY", None)
+    for name in substituted:
+        env.pop(name, None)
     proc = subprocess.run(
         ["/usr/bin/curl", *cmd_args],
         cwd=str(workdir),

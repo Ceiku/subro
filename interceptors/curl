@@ -2,15 +2,17 @@
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-has_placeholder=0
+# Forward to broker when curl args reference host env vars ($VAR / ${VAR}).
+# The sandbox has env -i; the broker substitutes from ~/.config/agent-broker/env.
+needs_broker=0
 for a in "$@"; do
-  if [[ "$a" == *"X-PROD-KEY"* ]]; then
-    has_placeholder=1
+  if echo "$a" | grep -qE '\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\}'; then
+    needs_broker=1
     break
   fi
 done
 
-if [[ "$has_placeholder" -eq 0 ]]; then
+if [[ "$needs_broker" -eq 0 ]]; then
   exec /usr/bin/curl "$@"
 fi
 

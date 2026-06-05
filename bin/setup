@@ -82,7 +82,9 @@ BROKER_SOCKET_TOKEN=${TOKEN}
 # Restrict what workdirs the broker will execute inside (required):
 BROKER_ALLOWED_ROOTS="${HOME}/dev,${HOME}/work"
 
-# Required for curl placeholder mutation:
+# Secrets for broker-mediated curl — reference as $VAR_NAME in sandbox curl args:
+# STRIPE_API_TOKEN=sk_live_...
+# GIT_TOKEN=ghp_...
 # PROD_API_KEY=...
 
 # Optional: override socket path:
