@@ -41,7 +41,15 @@ Then run agents as usual:
 ./bin/doctor
 ```
 
-If `cplt` is not on `PATH`, subro **falls back to native** and prints a warning.
+If `cplt` is not on `PATH`, or `cplt` exits non-zero, subro **falls back to native** and prints a warning.
+
+`cplt` is resolved on the **host** `PATH` before subro scrubs `PATH` for the sandboxed child. If
+`cplt` lives outside the usual PATH (e.g. `~/.local/bin`), ensure that directory is on your shell
+`PATH`, or set an explicit binary:
+
+```bash
+SUBRO_CPLT_BIN=$HOME/.local/bin/cplt
+```
 
 ## Disable kernel sandbox entirely
 

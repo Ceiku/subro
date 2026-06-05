@@ -272,22 +272,34 @@ subro_sandbox_backend() {
   esac
 }
 
+# Resolve cplt before any sandbox PATH mutation (host PATH may omit ~/.local/bin in agent-run).
+subro_cplt_bin() {
+  if [[ -n "${SUBRO_CPLT_BIN:-}" && -x "${SUBRO_CPLT_BIN}" ]]; then
+    printf '%s' "${SUBRO_CPLT_BIN}"
+    return 0
+  fi
+  command -v cplt 2>/dev/null || true
+}
+
 subro_cplt_available() {
-  command -v cplt >/dev/null 2>&1
+  [[ -n "$(subro_cplt_bin)" ]]
 }
 
 # Run the agent command under navikt/cplt (external binary). Caller exports harness
 # env vars before invoking. Does not nest with native Seatbelt/Landlock.
+# cplt_bin must be an absolute or host-PATH-resolved path — not looked up after PATH is scrubbed.
 subro_run_cplt_sandbox() {
   local sandbox_path="$1"
   local sock="$2"
   local root="$3"
-  shift 3
+  local cplt_bin="$4"
+  shift 4
 
   local sock_dir
   sock_dir="$(dirname "$sock")"
   local -a cplt_args=(--agent shell -y --allow-write "$sock_dir")
 
+  # Env for the sandboxed child (--pass-env). Do not use this PATH to find cplt.
   export PATH="$sandbox_path"
   export BROKER_SOCK="$sock"
   export SUBRO_ROOT="$root"
@@ -302,7 +314,7 @@ subro_run_cplt_sandbox() {
   [[ -n "${OPENCODE_STATE_DIR:-}" ]] && cplt_args+=(--pass-env OPENCODE_STATE_DIR)
   [[ -n "${OPENCODE_CONFIG:-}" ]] && cplt_args+=(--pass-env OPENCODE_CONFIG)
 
-  cplt "${cplt_args[@]}" -- "$@"
+  "$cplt_bin" "${cplt_args[@]}" -- "$@"
 }
 
 # Print one-line Landlock status for doctor/setup. Returns 0 when usable.

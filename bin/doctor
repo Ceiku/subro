@@ -71,7 +71,7 @@ SANDBOX_BACKEND="$(subro_sandbox_backend)"
 if [[ "$SANDBOX_BACKEND" == "cplt" ]]; then
   ok "SUBRO_SANDBOX=cplt (navikt/cplt — optional MIT dependency)"
   if subro_cplt_available; then
-    ok "cplt on PATH ($(cplt --version 2>/dev/null || echo unknown))"
+    ok "cplt at $(subro_cplt_bin) ($(cplt --version 2>/dev/null || echo unknown))"
   else
     warn "cplt not on PATH (agent-run falls back to native; brew install navikt/tap/cplt)"
   fi

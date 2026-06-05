@@ -47,6 +47,11 @@ subro_setup_check() {
     echo "  broker:      not running (on-demand via ./bin/agent or ./bin/doctor)"
   fi
   echo "  sandbox:     ${SUBRO_SANDBOX:-native}"
+  if [[ "${SUBRO_SANDBOX:-native}" == "cplt" ]] && subro_cplt_available; then
+    echo "  cplt:        $(subro_cplt_bin)"
+  elif [[ "${SUBRO_SANDBOX:-native}" == "cplt" ]]; then
+    echo "  cplt:        not found (will fall back to native)"
+  fi
   echo
   echo "Broker roots:"
   subro_validate_broker_roots warn "$cwd" | sed 's/^/  /' || true
