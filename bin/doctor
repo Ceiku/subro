@@ -2,29 +2,18 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=bin/_lib.sh
+source "$ROOT/bin/_lib.sh"
+
 FAIL=0
 
 ok() { echo "  OK: $*"; }
 warn() { echo "  WARN: $*"; }
 bad() { echo "  FAIL: $*"; FAIL=1; }
 
-default_sock() {
-  case "$(uname -s)" in
-    Darwin) echo "${HOME}/Library/Application Support/agent-broker/agent-broker.sock" ;;
-    Linux) echo "${XDG_RUNTIME_DIR:-/tmp}/agent-broker/agent-broker.sock" ;;
-    *) echo "/tmp/agent-broker/agent-broker.sock" ;;
-  esac
-}
-
-BROKER_ENV_FILE="${BROKER_ENV_FILE:-${HOME}/.config/agent-broker/env}"
-if [[ -f "$BROKER_ENV_FILE" ]]; then
-  set -a
-  # shellcheck disable=SC1090
-  source "$BROKER_ENV_FILE"
-  set +a
-fi
-
-SOCK="${BROKER_SOCK:-$(default_sock)}"
+subro_load_broker_env
+SOCK="${BROKER_SOCK:-$(subro_default_sock)}"
+CWD="$(pwd)"
 
 echo "== subro doctor =="
 echo
@@ -33,7 +22,7 @@ echo "1) Broker daemon"
 if "$ROOT/bin/broker-daemon" status >/dev/null 2>&1; then
   ok "broker running"
 else
-  bad "broker not running (./bin/broker-daemon start)"
+  bad "broker not running (./bin/broker-daemon start or ./bin/agent …)"
 fi
 
 echo "2) Socket"
@@ -44,15 +33,17 @@ else
 fi
 
 echo "3) Broker env"
+BROKER_ENV_FILE="${BROKER_ENV_FILE:-${HOME}/.config/agent-broker/env}"
 if [[ -f "$BROKER_ENV_FILE" ]]; then
   ok "env file: $BROKER_ENV_FILE"
 else
   warn "no env file (run ./bin/setup)"
 fi
-if [[ -n "${BROKER_ALLOWED_ROOTS:-}" ]]; then
-  ok "BROKER_ALLOWED_ROOTS=${BROKER_ALLOWED_ROOTS}"
+roots_check="$(subro_validate_broker_roots warn "$CWD" 2>&1)" || true
+if [[ -n "$roots_check" ]]; then
+  echo "$roots_check" | sed 's/^/  /'
 else
-  warn "BROKER_ALLOWED_ROOTS unset (broker defaults to its cwd)"
+  ok "BROKER_ALLOWED_ROOTS OK for $CWD"
 fi
 if [[ -n "${BROKER_SOCKET_TOKEN:-}" ]]; then
   ok "BROKER_SOCKET_TOKEN is set"
@@ -69,30 +60,55 @@ if [[ -f "$ROOT/.broker/log.txt" ]]; then
   fi
 fi
 
-echo "5) UDS ping (entur-departures --help via broker)"
+echo "5) Host broker ping (outside sandbox)"
 if [[ -S "$SOCK" ]]; then
   export BROKER_SOCK="$SOCK"
   if "$ROOT/interceptors/entur-departures" --help >/dev/null 2>&1; then
     ok "broker responded to entur-departures --help"
   else
-    bad "broker call failed (check BROKER_ALLOWED_ROOTS includes $(pwd))"
+    bad "broker call failed (check BROKER_ALLOWED_ROOTS includes $CWD)"
   fi
 else
   bad "skipped (no socket)"
 fi
 
-echo "6) Sandbox smoke"
+echo "6) In-sandbox broker UDS (entur-departures --help)"
+if "$ROOT/bin/agent-run" bash -lc 'entur-departures --help >/dev/null' 2>/dev/null; then
+  ok "sandbox can reach broker via UDS"
+else
+  bad "in-sandbox broker call failed (broker down, token mismatch, or Seatbelt socket deny)"
+fi
+
+echo "7) In-sandbox entur-departures smoke"
+if "$ROOT/bin/agent-run" bash -lc 'entur-departures jernbanetorget 1 >/dev/null' 2>/dev/null; then
+  ok "sandbox entur-departures returned data"
+else
+  warn "entur smoke call failed (network/API or broker policy; --help test above is the critical check)"
+fi
+
+echo "8) Sandbox shell smoke"
 if "$ROOT/bin/agent-run" bash -lc 'echo sandbox-ok' >/dev/null 2>&1; then
   ok "agent-run sandbox executes"
 else
   bad "agent-run failed (try SUBRO_NO_SANDBOX=1 for diagnosis)"
 fi
 
-echo "7) Interceptors on PATH"
+echo "9) Interceptors on PATH"
 if "$ROOT/bin/agent-run" bash -lc 'command -v mvn | grep -q interceptors'; then
   ok "mvn resolves to interceptor"
 else
   warn "mvn interceptor not first in PATH"
+fi
+
+echo "10) pi integration (optional)"
+if command -v pi >/dev/null 2>&1; then
+  if subro_prepare_pi_shims "$CWD" >/dev/null 2>&1; then
+    ok "pi + node shims ready in .agent-bin/"
+  else
+    warn "pi found but shim setup failed"
+  fi
+else
+  warn "pi not on PATH (optional; npm i -g @earendil-works/pi-coding-agent)"
 fi
 
 echo

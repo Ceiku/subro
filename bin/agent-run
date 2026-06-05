@@ -58,11 +58,14 @@ sandbox_env() {
     BROKER_SOCK="$SOCK" \
     SUBRO_ROOT="$ROOT" \
     ${BROKER_SOCKET_TOKEN:+BROKER_SOCKET_TOKEN="$BROKER_SOCKET_TOKEN"} \
+    ${PI_CODING_AGENT_DIR:+PI_CODING_AGENT_DIR="$PI_CODING_AGENT_DIR"} \
+    ${PI_CODING_AGENT_SESSION_DIR:+PI_CODING_AGENT_SESSION_DIR="$PI_CODING_AGENT_SESSION_DIR"} \
     "$@"
 }
 
 run_unsandboxed() {
-  exec sandbox_env "$@"
+  sandbox_env "$@"
+  exit $?
 }
 
 run_macos_sandbox() {
@@ -166,6 +169,13 @@ run_linux_landlock() {
   fi
   exit "$rc"
 }
+
+if [[ "${1:-}" == "pi" ]]; then
+  # shellcheck source=bin/_lib.sh
+  source "${ROOT}/bin/_lib.sh"
+  subro_prepare_pi_shims "$WORKDIR" || exit 1
+  export PI_CODING_AGENT_DIR="${PI_CODING_AGENT_DIR:-${HOME}/.pi/agent}"
+fi
 
 uname_s="$(uname -s)"
 case "$uname_s" in

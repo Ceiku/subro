@@ -40,6 +40,12 @@ Status legend: `done` | `partial` | `todo`
 | P3.3 | Linux Landlock CI / real binary | todo | |
 | P3.4 | Integration test script | todo | |
 | P3.5 | Fair Source license (FSL-1.1-ALv2) | done | `LICENSE`, `FAIR-SOURCE.md`, `CONTRIBUTING.md`, `TRADEMARK.md` |
+| P3.6 | First-class `./bin/agent pi` integration | done | shims, `PI_CODING_AGENT_DIR`, `--global-pi` |
+| P3.7 | Harness env var docs | done | README table + global pi settings |
+| P3.8 | Doctor in-sandbox broker tests | done | UDS + entur smoke inside sandbox |
+| P3.9 | `BROKER_ALLOWED_ROOTS` validation | done | `setup` + `doctor` via `bin/_lib.sh` |
+| P3.10 | Fix `SUBRO_NO_SANDBOX=1` | done | `sandbox_env` function no longer exec'd |
+| P3.11 | Broker lifecycle docs + stale socket/pid | done | `broker-daemon status`, README |
 
 ## P4 — Future (from planning doc)
 

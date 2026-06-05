@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-# Sync skills/*/SKILL.md into harness discovery paths (Cursor, pi.dev, agents).
+# Sync skills/*/SKILL.md into harness discovery paths (Cursor, pi, agents).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+GLOBAL_PI=0
+for arg in "$@"; do
+  case "$arg" in
+    --global-pi) GLOBAL_PI=1 ;;
+  esac
+done
 SKILLS_SRC="${ROOT}/skills"
 
 if [[ ! -d "$SKILLS_SRC" ]]; then
@@ -73,7 +79,7 @@ AGENTS_MD="${ROOT}/AGENTS.md"
   echo "Sandboxed agent runtime with broker-mediated tools. Start with:"
   echo
   echo '```bash'
-  echo "./bin/agent bash   # or: ./bin/agent pi.dev"
+  echo "./bin/agent bash   # or: ./bin/agent pi"
   echo '```'
   echo
   echo "## Skills"
@@ -87,6 +93,12 @@ AGENTS_MD="${ROOT}/AGENTS.md"
   echo
   echo "Run \`./bin/skills-sync\` after adding or changing skills."
 } >"$AGENTS_MD"
+
+if [[ "$GLOBAL_PI" -eq 1 ]]; then
+  # shellcheck source=bin/_lib.sh
+  source "${ROOT}/bin/_lib.sh"
+  subro_sync_pi_global_skills "$ROOT" || true
+fi
 
 echo "Synced $count skill(s) to .cursor/skills, .pi/skills, .agents/skills"
 echo "Updated: .pi/settings.json (if new), .cursor/rules/subro-skills.mdc, AGENTS.md"

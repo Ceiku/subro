@@ -7,7 +7,7 @@ BROKER_ENV_FILE="${BROKER_ENV_FILE:-${HOME}/.config/agent-broker/env}"
 
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <command> [args...]" >&2
-  echo "Example: $0 pi.dev" >&2
+  echo "Example: $0 pi          # pi coding agent (recommended)" >&2
   echo "         $0 bash" >&2
   exit 2
 fi
@@ -18,4 +18,15 @@ fi
 
 "$ROOT/bin/broker-daemon" start >/dev/null 2>&1 || true
 "$ROOT/bin/skills-sync" >/dev/null 2>&1 || true
+
+if [[ "$1" == "pi" ]]; then
+  shift
+  # shellcheck source=bin/_lib.sh
+  source "$ROOT/bin/_lib.sh"
+  subro_prepare_pi_shims "$(pwd)"
+  subro_sync_pi_global_skills "$ROOT" >/dev/null 2>&1 || true
+  export PI_CODING_AGENT_DIR="${PI_CODING_AGENT_DIR:-${HOME}/.pi/agent}"
+  exec "$ROOT/bin/agent-run" pi "$@"
+fi
+
 exec "$ROOT/bin/agent-run" "$@"

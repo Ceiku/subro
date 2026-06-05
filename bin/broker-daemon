@@ -76,6 +76,9 @@ case "$cmd" in
       echo "Broker already running (pid $(cat "$PID_FILE"))."
       exit 0
     fi
+    if [[ -f "$PID_FILE" ]]; then
+      rm -f "$PID_FILE"
+    fi
 
     load_env_file
     ensure_sock_dir
@@ -107,11 +110,28 @@ case "$cmd" in
     ;;
 
   status)
+    load_env_file
+    sock="${BROKER_SOCK:-$(default_sock)}"
     if is_running; then
       echo "Broker running (pid $(cat "$PID_FILE"))."
+      if [[ -S "$sock" ]]; then
+        echo "Socket: $sock"
+      else
+        echo "WARN: process alive but socket missing at $sock"
+      fi
       exit 0
     fi
+    if [[ -f "$PID_FILE" ]]; then
+      echo "Stale pid file removed (pid $(cat "$PID_FILE") not running)."
+      rm -f "$PID_FILE"
+    fi
+    if [[ -S "$sock" ]]; then
+      echo "Broker not running, but stale socket exists: $sock"
+      echo "Run: ./bin/broker-daemon start   # removes stale socket and starts broker"
+      exit 1
+    fi
     echo "Broker not running."
+    echo "Note: ./bin/agent starts the broker on demand for each session."
     exit 1
     ;;
 

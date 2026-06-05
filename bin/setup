@@ -60,10 +60,18 @@ fi
 chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/{agent,agent-run,broker-daemon,broker-stdio,install-interceptors,doctor,skill-init,skills-sync,apm} 2>/dev/null || true
 chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/interceptors/{_broker_call.py,mvn,curl,entur-departures} 2>/dev/null || true
 
+# shellcheck source=bin/_lib.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
+subro_load_broker_env
+echo
+echo "Broker roots check:"
+subro_validate_broker_roots warn "$(pwd)" | sed 's/^/  /' || true
+
 echo
 echo "Next steps:"
 echo "1) Edit broker env file: $BROKER_ENV_FILE"
-echo "2) Start broker: BROKER_ENV_FILE=\"$BROKER_ENV_FILE\" ./bin/broker-daemon start"
-echo "3) Sync harness skills: ./bin/skills-sync"
-echo "4) Run sandboxed command: ./bin/agent <your-cli>"
+echo "   Set BROKER_ALLOWED_ROOTS to directories you develop in (must include project cwd)."
+echo "2) Verify: ./bin/doctor"
+echo "3) Sync harness skills: ./bin/skills-sync --global-pi   # optional: merge into ~/.pi/agent/settings.json"
+echo "4) Run sandboxed pi: ./bin/agent pi"
 

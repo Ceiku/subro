@@ -88,14 +88,43 @@ Optional broker env: `ENTUR_CLIENT_NAME=subro-yourname` (defaults to `subro-agen
 
 Agent instructions: `skills/entur-departures/SKILL.md`.
 
-## Harness integration (pi.dev / Cursor)
+## Harness integration (pi / Cursor)
 
 ```bash
-./bin/skills-sync   # links skills → .cursor/skills, .pi/skills; updates AGENTS.md
-./bin/agent pi.dev  # auto-runs skills-sync + broker + sandbox
+./bin/skills-sync              # links skills → .cursor/skills, .pi/skills; updates AGENTS.md
+./bin/skills-sync --global-pi  # also merge skills/ into ~/.pi/agent/settings.json
+./bin/agent pi                 # one command: broker + shims + sandbox + pi
 ```
 
+`./bin/agent pi` prepares everything automatically:
+
+- starts the broker (on demand)
+- symlinks `pi` and `node` into `./.agent-bin/` (sandbox `PATH`)
+- sets `PI_CODING_AGENT_DIR` to your real `~/.pi/agent` (sandbox uses a fake `HOME`)
+- syncs project skills into global pi settings when needed
+
 See [docs/P1-P4.md](docs/P1-P4.md) for `register-skill`, `apm`, PII scrubbing, and STDIO broker.
+
+### Running Node / Rust / Python agent CLIs
+
+The sandbox sets `HOME` to `./.agent-home`, so harnesses that store config under `~` need an explicit override:
+
+| Harness | Gotcha | Fix |
+|---------|--------|-----|
+| **pi** | fake `HOME` hides `~/.pi/agent` | `PI_CODING_AGENT_DIR=$HOME/.pi/agent` (set automatically by `./bin/agent pi`) |
+| **pi** | `pi` / `node` not on sandbox `PATH` | shims in `./.agent-bin/` (automatic with `./bin/agent pi`) |
+| **Cursor** | project skills | `./bin/skills-sync` → `.cursor/skills/` symlinks |
+| **Generic** | broker socket + token | loaded from `~/.config/agent-broker/env` into sandbox env |
+
+### Global pi config (`~/.pi/agent/settings.json`)
+
+If you use a **global** pi harness (not per-project `.pi/settings.json`), add this repo’s `skills/` directory with an **absolute path** in `~/.pi/agent/settings.json`:
+
+```json
+{ "skills": ["/path/to/subro/skills"] }
+```
+
+Or run `./bin/skills-sync --global-pi` / `./bin/agent pi` to merge it for you. Secrets stay in `~/.config/agent-broker/env` (broker only), not in pi settings. Set `BROKER_ALLOWED_ROOTS` to cover your dev tree (comma-separated), including each project directory where you run `./bin/agent`.
 
 ## Quick start
 
@@ -111,10 +140,14 @@ See [docs/P1-P4.md](docs/P1-P4.md) for `register-skill`, `apm`, PII scrubbing, a
 
 ```bash
 ./bin/agent bash          # sandboxed shell
-./bin/agent pi.dev          # example harness
+./bin/agent pi            # pi coding agent (recommended)
 ```
 
-### 1) Start the broker (privileged host process)
+### 1) Broker lifecycle
+
+The broker is **on-demand**: `./bin/agent` starts it automatically if it is not already running. You do not need a separate terminal session.
+
+For manual control:
 
 The broker loads secrets from an **env file** (default: `~/.config/agent-broker/env`).
 
@@ -132,10 +165,14 @@ From the repo root:
 ```bash
 export BROKER_ENV_FILE="$HOME/.config/agent-broker/env"
 ./bin/broker-daemon start
-./bin/broker-daemon status
+./bin/broker-daemon status   # detects stale pid files and orphan sockets
 ```
 
+If `status` reports a **stale socket** (file exists but process is dead), run `start` again — it removes the old socket before binding.
+
 Logs go to `./.broker/log.txt`.
+
+Debug without kernel sandbox: `SUBRO_NO_SANDBOX=1 ./bin/agent bash` (still uses scrubbed `env -i` and fake `HOME`).
 
 To stop:
 

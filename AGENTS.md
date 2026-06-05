@@ -3,7 +3,7 @@
 Sandboxed agent runtime with broker-mediated tools. Start with:
 
 ```bash
-./bin/agent bash   # or: ./bin/agent pi.dev
+./bin/agent bash   # or: ./bin/agent pi
 ```
 
 ## Skills
