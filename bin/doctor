@@ -100,7 +100,7 @@ else
   warn "mvn interceptor not first in PATH"
 fi
 
-echo "10) pi integration (optional)"
+echo "10) pi harness (optional)"
 if command -v pi >/dev/null 2>&1; then
   if subro_prepare_pi_shims "$CWD" >/dev/null 2>&1; then
     ok "pi + node shims ready in .agent-bin/"
@@ -109,6 +109,17 @@ if command -v pi >/dev/null 2>&1; then
   fi
 else
   warn "pi not on PATH (optional; npm i -g @earendil-works/pi-coding-agent)"
+fi
+
+echo "11) opencode harness (optional)"
+if command -v opencode >/dev/null 2>&1; then
+  if subro_prepare_opencode_shims "$CWD" >/dev/null 2>&1; then
+    ok "opencode shims ready in .agent-bin/"
+  else
+    warn "opencode found but shim setup failed"
+  fi
+else
+  warn "opencode not on PATH (optional; https://opencode.ai/docs/config/)"
 fi
 
 echo

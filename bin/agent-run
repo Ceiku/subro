@@ -60,6 +60,11 @@ sandbox_env() {
     ${BROKER_SOCKET_TOKEN:+BROKER_SOCKET_TOKEN="$BROKER_SOCKET_TOKEN"} \
     ${PI_CODING_AGENT_DIR:+PI_CODING_AGENT_DIR="$PI_CODING_AGENT_DIR"} \
     ${PI_CODING_AGENT_SESSION_DIR:+PI_CODING_AGENT_SESSION_DIR="$PI_CODING_AGENT_SESSION_DIR"} \
+    ${OPENCODE_CONFIG_DIR:+OPENCODE_CONFIG_DIR="$OPENCODE_CONFIG_DIR"} \
+    ${OPENCODE_DATA_DIR:+OPENCODE_DATA_DIR="$OPENCODE_DATA_DIR"} \
+    ${OPENCODE_CACHE_DIR:+OPENCODE_CACHE_DIR="$OPENCODE_CACHE_DIR"} \
+    ${OPENCODE_STATE_DIR:+OPENCODE_STATE_DIR="$OPENCODE_STATE_DIR"} \
+    ${OPENCODE_CONFIG:+OPENCODE_CONFIG="$OPENCODE_CONFIG"} \
     "$@"
 }
 
@@ -170,11 +175,19 @@ run_linux_landlock() {
   exit "$rc"
 }
 
-if [[ "${1:-}" == "pi" ]]; then
+if [[ "${1:-}" == "pi" || "${1:-}" == "opencode" ]]; then
   # shellcheck source=bin/_lib.sh
   source "${ROOT}/bin/_lib.sh"
+fi
+
+if [[ "${1:-}" == "pi" ]]; then
   subro_prepare_pi_shims "$WORKDIR" || exit 1
   export PI_CODING_AGENT_DIR="${PI_CODING_AGENT_DIR:-${HOME}/.pi/agent}"
+fi
+
+if [[ "${1:-}" == "opencode" ]]; then
+  subro_prepare_opencode_shims "$WORKDIR" || exit 1
+  subro_export_opencode_harness_env "$HOME"
 fi
 
 uname_s="$(uname -s)"

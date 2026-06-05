@@ -6,6 +6,7 @@ broker/.venv/
 .agent-skills/
 .cursor/skills/
 .pi/skills/
+.opencode/skills/
 .agents/skills/
 .env
 .env.*

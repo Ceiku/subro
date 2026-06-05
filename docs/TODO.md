@@ -46,6 +46,7 @@ Status legend: `done` | `partial` | `todo`
 | P3.9 | `BROKER_ALLOWED_ROOTS` validation | done | `setup` + `doctor` via `bin/_lib.sh` |
 | P3.10 | Fix `SUBRO_NO_SANDBOX=1` | done | `sandbox_env` function no longer exec'd |
 | P3.11 | Broker lifecycle docs + stale socket/pid | done | `broker-daemon status`, README |
+| P3.12 | First-class `./bin/agent opencode` integration | done | shims, `OPENCODE_*_DIR`, `--global-opencode` |
 
 ## P4 — Future (from planning doc)
 

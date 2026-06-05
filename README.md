@@ -88,20 +88,24 @@ Optional broker env: `ENTUR_CLIENT_NAME=subro-yourname` (defaults to `subro-agen
 
 Agent instructions: `skills/entur-departures/SKILL.md`.
 
-## Harness integration (pi / Cursor)
+## Harness integration (pi / OpenCode / Cursor)
+
+Subro includes **first-class harness modes** for Node-based agent CLIs. Run from any project directory under `BROKER_ALLOWED_ROOTS` — not only inside this repo.
 
 ```bash
-./bin/skills-sync              # links skills → .cursor/skills, .pi/skills; updates AGENTS.md
-./bin/skills-sync --global-pi  # also merge skills/ into ~/.pi/agent/settings.json
-./bin/agent pi                 # one command: broker + shims + sandbox + pi
+./bin/skills-sync                    # .cursor/, .pi/, .opencode/, .agents/ symlinks
+./bin/skills-sync --global-pi        # merge skills/ → ~/.pi/agent/settings.json
+./bin/skills-sync --global-opencode  # symlink skills/ → ~/.config/opencode/skills/
+./bin/agent pi                       # pi coding agent
+./bin/agent opencode                 # OpenCode agent
 ```
 
-`./bin/agent pi` prepares everything automatically:
+Each `./bin/agent <harness>` mode:
 
 - starts the broker (on demand)
-- symlinks `pi` and `node` into `./.agent-bin/` (sandbox `PATH`)
-- sets `PI_CODING_AGENT_DIR` to your real `~/.pi/agent` (sandbox uses a fake `HOME`)
-- syncs project skills into global pi settings when needed
+- symlinks the CLI (+ `node`) into `./.agent-bin/` (sandbox `PATH`)
+- points harness config at your **real** `~` dirs (sandbox uses fake `HOME=./.agent-home`)
+- syncs broker skills into global harness config when needed
 
 See [docs/P1-P4.md](docs/P1-P4.md) for `register-skill`, `apm`, PII scrubbing, and STDIO broker.
 
@@ -111,8 +115,10 @@ The sandbox sets `HOME` to `./.agent-home`, so harnesses that store config under
 
 | Harness | Gotcha | Fix |
 |---------|--------|-----|
-| **pi** | fake `HOME` hides `~/.pi/agent` | `PI_CODING_AGENT_DIR=$HOME/.pi/agent` (set automatically by `./bin/agent pi`) |
-| **pi** | `pi` / `node` not on sandbox `PATH` | shims in `./.agent-bin/` (automatic with `./bin/agent pi`) |
+| **pi** | fake `HOME` hides `~/.pi/agent` | `PI_CODING_AGENT_DIR` (automatic via `./bin/agent pi`) |
+| **pi** | `pi` / `node` not on sandbox `PATH` | shims in `./.agent-bin/` |
+| **OpenCode** | fake `HOME` hides `~/.config/opencode` and `~/.local/share/opencode` | `OPENCODE_CONFIG_DIR`, `OPENCODE_DATA_DIR`, etc. (automatic via `./bin/agent opencode`) |
+| **OpenCode** | global skills not in project `.opencode/` | `./bin/skills-sync --global-opencode` → `~/.config/opencode/skills/` |
 | **Cursor** | project skills | `./bin/skills-sync` → `.cursor/skills/` symlinks |
 | **Generic** | broker socket + token | loaded from `~/.config/agent-broker/env` into sandbox env |
 
@@ -124,7 +130,15 @@ If you use a **global** pi harness (not per-project `.pi/settings.json`), add th
 { "skills": ["/path/to/subro/skills"] }
 ```
 
-Or run `./bin/skills-sync --global-pi` / `./bin/agent pi` to merge it for you. Secrets stay in `~/.config/agent-broker/env` (broker only), not in pi settings. Set `BROKER_ALLOWED_ROOTS` to cover your dev tree (comma-separated), including each project directory where you run `./bin/agent`.
+Or run `./bin/skills-sync --global-pi` / `./bin/agent pi` to merge it for you.
+
+### Global OpenCode config (`~/.config/opencode/`)
+
+OpenCode discovers skills at `~/.config/opencode/skills/<name>/SKILL.md` and stores sessions/auth under `~/.local/share/opencode`. The fake sandbox `HOME` would hide all of that without overrides.
+
+`./bin/agent opencode` sets `OPENCODE_CONFIG_DIR`, `OPENCODE_DATA_DIR`, `OPENCODE_CACHE_DIR`, and `OPENCODE_STATE_DIR` to your real home paths. Run `./bin/skills-sync --global-opencode` to symlink broker skills into the global skills tree.
+
+Secrets stay in `~/.config/agent-broker/env` (broker only), not in harness settings. Set `BROKER_ALLOWED_ROOTS` to cover your dev tree (comma-separated), including each project directory where you run `./bin/agent`.
 
 ## Quick start
 
@@ -140,7 +154,8 @@ Or run `./bin/skills-sync --global-pi` / `./bin/agent pi` to merge it for you. S
 
 ```bash
 ./bin/agent bash          # sandboxed shell
-./bin/agent pi            # pi coding agent (recommended)
+./bin/agent pi            # pi coding agent
+./bin/agent opencode      # OpenCode agent
 ```
 
 ### 1) Broker lifecycle

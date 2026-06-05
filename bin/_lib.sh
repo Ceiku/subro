@@ -70,27 +70,72 @@ subro_validate_broker_roots() {
   return 0
 }
 
-# Symlink pi + node into workdir/.agent-bin for sandboxed PATH.
-subro_prepare_pi_shims() {
-  local workdir="${1:-$(pwd)}"
+# Symlink node + named CLIs into workdir/.agent-bin for sandbox PATH.
+subro_prepare_node_cli_shims() {
+  local workdir="$1"
+  shift
   local agent_bin="${workdir}/.agent-bin"
-  local pi_bin node_bin
+  local node_bin cmd_bin cmd
 
-  pi_bin="$(command -v pi 2>/dev/null || true)"
   node_bin="$(command -v node 2>/dev/null || true)"
-
-  if [[ -z "$pi_bin" ]]; then
-    echo "pi not found on PATH (install: npm i -g @earendil-works/pi-coding-agent)" >&2
-    return 1
-  fi
   if [[ -z "$node_bin" ]]; then
-    echo "node not found on PATH (required by pi)" >&2
+    echo "node not found on PATH (required for Node-based agent CLIs)" >&2
     return 1
   fi
 
   mkdir -p "$agent_bin"
-  ln -sfn "$pi_bin" "${agent_bin}/pi"
   ln -sfn "$node_bin" "${agent_bin}/node"
+
+  for cmd in "$@"; do
+    cmd_bin="$(command -v "$cmd" 2>/dev/null || true)"
+    if [[ -z "$cmd_bin" ]]; then
+      echo "$cmd not found on PATH" >&2
+      return 1
+    fi
+    ln -sfn "$cmd_bin" "${agent_bin}/${cmd}"
+  done
+}
+
+# Symlink pi + node into workdir/.agent-bin for sandboxed PATH.
+subro_prepare_pi_shims() {
+  subro_prepare_node_cli_shims "${1:?}" pi
+}
+
+# Point OpenCode at the real harness dirs (sandbox uses a fake HOME).
+subro_export_opencode_harness_env() {
+  local real_home="${1:-$HOME}"
+  export OPENCODE_CONFIG_DIR="${OPENCODE_CONFIG_DIR:-${real_home}/.config/opencode}"
+  export OPENCODE_DATA_DIR="${OPENCODE_DATA_DIR:-${real_home}/.local/share/opencode}"
+  export OPENCODE_CACHE_DIR="${OPENCODE_CACHE_DIR:-${real_home}/.cache/opencode}"
+  export OPENCODE_STATE_DIR="${OPENCODE_STATE_DIR:-${real_home}/.local/state/opencode}"
+}
+
+# Symlink opencode (+ node, optional bun) into .agent-bin.
+subro_prepare_opencode_shims() {
+  local workdir="${1:?}"
+  subro_prepare_node_cli_shims "$workdir" opencode || return 1
+  local bun_bin
+  bun_bin="$(command -v bun 2>/dev/null || true)"
+  if [[ -n "$bun_bin" ]]; then
+    ln -sfn "$bun_bin" "${workdir}/.agent-bin/bun"
+  fi
+}
+
+# Symlink each skills/<name>/ into a harness skills directory.
+subro_link_skills_tree() {
+  local root="$1"
+  local dest_root="$2"
+  local skills_src="${root}/skills"
+  local skill_dir name
+
+  [[ -d "$skills_src" ]] || return 0
+  mkdir -p "$dest_root"
+  for skill_dir in "$skills_src"/*; do
+    [[ -d "$skill_dir" ]] || continue
+    [[ -f "$skill_dir/SKILL.md" ]] || continue
+    name="$(basename "$skill_dir")"
+    ln -sfn "$skill_dir" "${dest_root}/${name}"
+  done
 }
 
 # Merge repo skills/ into ~/.pi/agent/settings.json (absolute path).
@@ -121,4 +166,11 @@ if skills_dir not in skills:
         f.write("\n")
     print(f"Added {skills_dir} to {settings_path}")
 PY
+}
+
+# Symlink skills into ~/.config/opencode/skills/ for global harness users.
+subro_sync_opencode_global_skills() {
+  local root="$1"
+  local dest="${HOME}/.config/opencode/skills"
+  subro_link_skills_tree "$root" "$dest"
 }
