@@ -16,20 +16,26 @@ SOCK="${BROKER_SOCK:-$(subro_default_sock)}"
 CWD="$(pwd)"
 
 echo "== subro doctor =="
+echo "  version: $(subro_version "$ROOT")"
+echo "  (broker is on-demand — doctor starts it when needed, same as ./bin/agent)"
 echo
 
 echo "1) Broker daemon"
+if ! "$ROOT/bin/broker-daemon" status >/dev/null 2>&1; then
+  warn "broker not running — starting now"
+  subro_ensure_broker "$ROOT"
+fi
 if "$ROOT/bin/broker-daemon" status >/dev/null 2>&1; then
   ok "broker running"
 else
-  bad "broker not running (./bin/broker-daemon start or ./bin/agent …)"
+  bad "broker failed to start (see .broker/log.txt)"
 fi
 
 echo "2) Socket"
 if [[ -S "$SOCK" ]]; then
   ok "socket exists: $SOCK"
 else
-  bad "socket missing: $SOCK"
+  bad "socket missing after start (stale file removed on start; check .broker/log.txt)"
 fi
 
 echo "3) Broker env"
@@ -145,6 +151,16 @@ if command -v pi >/dev/null 2>&1; then
     ok "pi + node shims ready in .agent-bin/"
   else
     warn "pi found but shim setup failed"
+  fi
+  if "$ROOT/bin/agent-run" pi --help >/dev/null 2>&1; then
+    ok "sandbox pi --help (no LLM)"
+  else
+    warn "sandbox pi --help failed"
+  fi
+  if "$ROOT/bin/agent-run" pi list >/dev/null 2>&1; then
+    ok "sandbox pi list (no LLM)"
+  else
+    warn "sandbox pi list failed"
   fi
 else
   warn "pi not on PATH (optional; npm i -g @earendil-works/pi-coding-agent)"

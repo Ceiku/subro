@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=bin/_lib.sh
+source "${ROOT}/bin/_lib.sh"
+
 default_sock() {
   local uname_s
   uname_s="$(uname -s)"
@@ -18,6 +22,45 @@ default_sock() {
       ;;
   esac
 }
+
+subro_setup_check() {
+  subro_load_broker_env
+  local sock="${BROKER_SOCK:-$(default_sock)}"
+  local env_file="${BROKER_ENV_FILE:-${HOME}/.config/agent-broker/env}"
+  local cwd
+  cwd="$(pwd)"
+
+  echo "== subro setup --check =="
+  echo "  version:     $(subro_version "$ROOT")"
+  echo "  repo:        $ROOT"
+  echo "  cwd:         $cwd"
+  echo "  broker env:  ${env_file}"
+  if [[ -f "$env_file" ]]; then
+    echo "  env file:    present ($(stat -f '%Sm' -t '%Y-%m-%d' "$env_file" 2>/dev/null || stat -c '%y' "$env_file" 2>/dev/null | cut -d' ' -f1))"
+  else
+    echo "  env file:    missing (run ./bin/setup)"
+  fi
+  echo "  socket:      $sock"
+  if "$ROOT/bin/broker-daemon" status >/dev/null 2>&1; then
+    echo "  broker:      running"
+  else
+    echo "  broker:      not running (on-demand via ./bin/agent or ./bin/doctor)"
+  fi
+  echo "  sandbox:     ${SUBRO_SANDBOX:-native}"
+  echo
+  echo "Broker roots:"
+  subro_validate_broker_roots warn "$cwd" | sed 's/^/  /' || true
+  echo
+  echo "Smoke tests (no LLM): ./bin/doctor  or  ./bin/agent-run bash -lc 'entur-departures jernbanetorget 1'"
+  if command -v pi >/dev/null 2>&1; then
+    echo "  pi:          ./bin/agent-run pi --help  |  ./bin/agent-run pi list"
+  fi
+}
+
+if [[ "${1:-}" == "--check" ]]; then
+  subro_setup_check
+  exit 0
+fi
 
 BROKER_ENV_FILE="${BROKER_ENV_FILE:-${HOME}/.config/agent-broker/env}"
 BROKER_SOCK="${BROKER_SOCK:-$(default_sock)}"
@@ -58,27 +101,38 @@ else
     printf '\nBROKER_SOCKET_TOKEN=%s\n' "$TOKEN" >>"$BROKER_ENV_FILE"
     echo "Appended BROKER_SOCKET_TOKEN to existing env file"
   fi
+  echo "No changes (re-run with --check to see version and status after git pull)"
 fi
 
-chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/{agent,agent-run,broker-daemon,broker-stdio,install-interceptors,doctor,skill-init,skills-sync,apm} 2>/dev/null || true
-chmod +x "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"/interceptors/{_broker_call.py,mvn,curl,entur-departures} 2>/dev/null || true
+chmod +x "${ROOT}/bin"/{agent,agent-run,broker-daemon,broker-stdio,install-interceptors,doctor,skill-init,skills-sync,apm} 2>/dev/null || true
+chmod +x "${ROOT}/interceptors"/{_broker_call.py,mvn,curl,entur-departures} 2>/dev/null || true
 
-# shellcheck source=bin/_lib.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
 subro_load_broker_env
 echo
 echo "Broker roots check:"
 subro_validate_broker_roots warn "$(pwd)" | sed 's/^/  /' || true
 
+if [[ "$(uname -s)" == "Linux" ]]; then
+  echo
+  echo "Linux Landlock:"
+  if landlock_line="$(subro_landlock_status "$ROOT" 2>&1)"; then
+    echo "  OK: $landlock_line"
+  else
+    echo "  WARN: $landlock_line"
+    echo "  Build: ./bin/build-landlock-restrict"
+  fi
+fi
+
 echo
 echo "Next steps:"
 echo "1) Edit broker env file: $BROKER_ENV_FILE"
 echo "   Set BROKER_ALLOWED_ROOTS to directories you develop in (must include project cwd)."
-echo "2) Verify: ./bin/doctor"
-echo "3) Sync harness skills:"
+echo "2) Verify: ./bin/doctor          # auto-starts broker; safe before first ./bin/agent"
+echo "3) Status after upgrades: ./bin/setup --check"
+echo "4) Sync harness skills:"
 echo "     ./bin/skills-sync --global-pi        # ~/.pi/agent/settings.json"
 echo "     ./bin/skills-sync --global-opencode  # ~/.config/opencode/skills/"
-echo "4) Run sandboxed agent: ./bin/agent pi | ./bin/agent opencode"
+echo "5) Run sandboxed agent: ./bin/agent pi | ./bin/agent opencode"
 echo
 echo "Optional: use navikt/cplt as sandbox backend (brew install navikt/tap/cplt),"
 echo "  then set SUBRO_SANDBOX=cplt in $BROKER_ENV_FILE — see docs/cplt.md"
@@ -87,4 +141,3 @@ if command -v cplt >/dev/null 2>&1; then
 else
   echo "  cplt: not installed"
 fi
-

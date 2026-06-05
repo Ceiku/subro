@@ -17,11 +17,11 @@ if [[ -f "$BROKER_ENV_FILE" ]]; then
   export BROKER_ENV_FILE
 fi
 
-"$ROOT/bin/broker-daemon" start >/dev/null 2>&1 || true
-"$ROOT/bin/skills-sync" >/dev/null 2>&1 || true
-
 # shellcheck source=bin/_lib.sh
 source "$ROOT/bin/_lib.sh"
+
+subro_ensure_broker "$ROOT"
+subro_maybe_skills_sync "$ROOT"
 
 if [[ "$1" == "pi" ]]; then
   shift

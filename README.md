@@ -5,7 +5,7 @@
 This repo provides a **local, high-performance tool-execution split**:
 
 - A **sandboxed agent process** runs with a scrubbed environment and kernel-level filesystem restrictions.
-- For sensitive tools (`mvn`, `curl` when it contains a placeholder key), lightweight **interceptors** forward the request to a **privileged broker** over a **Unix Domain Socket**.
+- For sensitive tools (`git`, `mvn`, `curl` when it contains a placeholder key), lightweight **interceptors** forward the request to a **privileged broker** over a **Unix Domain Socket**.
 - The broker executes the real tool with host privileges, injects secrets, **scrubs sensitive strings** from outputs, and returns safe results.
 
 ## What this solves (security)
@@ -22,7 +22,7 @@ This is designed for running CLI-based coding agents safely in hostile condition
   - By default it also denies common ecosystem secret/config files used for dependency fetching and publishing (npm/pnpm/pip), such as `~/.npmrc`, `~/.config/pnpm`, `~/.config/pip`, `.netrc`, and repo-level `.npmrc`.
 
 - **Transparent, enforced tool mediation**
-  - Even if an agent “forgets” instructions, `PATH` is arranged so `mvn` and `curl` resolve to **wrappers** first.
+  - Even if an agent “forgets” instructions, `PATH` is arranged so `git`, `mvn`, and `curl` resolve to **wrappers** first.
   - Those wrappers forward structured requests to the broker, so privileged actions happen in a single choke point you control.
 
 - **Output scrubbing before the LLM sees it**
@@ -53,6 +53,7 @@ This is designed for running CLI-based coding agents safely in hostile condition
 │   └── skills/            # drop-in skill modules
 ├── interceptors/
 │   ├── _broker_call.py    # shared UDS client
+│   ├── git
 │   ├── mvn
 │   ├── curl
 │   └── entur-departures
@@ -149,8 +150,12 @@ Secrets stay in `~/.config/agent-broker/env` (broker only), not in harness setti
 ```bash
 ./bin/setup
 # Edit ~/.config/agent-broker/env — set BROKER_ALLOWED_ROOTS to your project paths
-./bin/doctor
+./bin/doctor   # auto-starts the broker (same on-demand behavior as ./bin/agent)
 ```
+
+After `git pull`, run `./bin/setup --check` to see the installed version and broker status.
+
+**Smoke tests (no LLM):** `./bin/doctor`, `./bin/agent-run pi --help`, `./bin/agent-run pi list`, or `./bin/agent-run bash -lc 'entur-departures jernbanetorget 1'`. Avoid `pi -p` for install verification — it blocks on the API.
 
 ### Run any CLI through the sandbox
 
@@ -162,7 +167,7 @@ Secrets stay in `~/.config/agent-broker/env` (broker only), not in harness setti
 
 ### 1) Broker lifecycle
 
-The broker is **on-demand**: `./bin/agent` starts it automatically if it is not already running. You do not need a separate terminal session.
+The broker is **on-demand**: `./bin/agent` and `./bin/doctor` start it automatically if it is not already running. You do not need a separate terminal session. A stale socket from a previous run is removed on start.
 
 For manual control:
 
@@ -220,6 +225,7 @@ Example (replace with your agent CLI):
 
 Behavior:
 
+- `git` inside the sandbox is intercepted and executed by the broker with host `HOME` (SSH keys, `~/.gitconfig`) and an allowlisted subcommand policy.
 - `mvn` inside the sandbox is intercepted and executed by the broker using host `~/.m2/settings.xml`.
 - `curl` is intercepted **only** if args contain `X-PROD-KEY`; otherwise it runs `/usr/bin/curl` inside the sandbox.
 

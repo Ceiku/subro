@@ -39,6 +39,9 @@ Status legend: `done` | `partial` | `todo`
 | P3.2 | `setup` generates socket token | done | |
 | P3.3 | Linux Landlock CI / real binary | done | vendored `tools/landlock-restrict`, `bin/build-landlock-restrict`, doctor/setup detection, `.github/workflows/linux-landlock.yml` |
 | P3.4 | Integration test script | todo | |
+| P3.4a | Doctor auto-start broker + pi smoke (no LLM) | done | Cold-start doctor; `pi --help` / `pi list` |
+| P3.4b | `setup --check` version stamp | done | Post-upgrade visibility |
+| P3.4c | Skills-sync stamp cache in `./bin/agent` | done | `.broker/.skills-sync-stamp` |
 | P3.5 | Fair Source license (FSL-1.1-ALv2) | done | `LICENSE`, `FAIR-SOURCE.md`, `CONTRIBUTING.md`, `TRADEMARK.md` |
 | P3.6 | First-class `./bin/agent pi` integration | done | shims, `PI_CODING_AGENT_DIR`, `--global-pi` |
 | P3.7 | Harness env var docs | done | README table + global pi settings |

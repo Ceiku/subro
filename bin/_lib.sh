@@ -19,6 +19,71 @@ subro_load_broker_env() {
   fi
 }
 
+# Git describe for setup --check and upgrade visibility.
+subro_version() {
+  local root="${1:-}"
+  if [[ -n "$root" ]] && git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "$root" describe --tags --always --dirty 2>/dev/null \
+      || git -C "$root" rev-parse --short HEAD 2>/dev/null \
+      || echo "unknown"
+    return 0
+  fi
+  echo "unknown"
+}
+
+# Start broker if needed (same on-demand behavior as ./bin/agent).
+subro_ensure_broker() {
+  local root="${1:?}"
+  if "$root/bin/broker-daemon" status >/dev/null 2>&1; then
+    return 0
+  fi
+  "$root/bin/broker-daemon" start >/dev/null 2>&1 || true
+}
+
+# Fingerprint skills/ for skip-if-unchanged sync in ./bin/agent.
+subro_skills_fingerprint() {
+  local root="$1"
+  python3 - "${root}/skills" <<'PY'
+import hashlib, os, sys
+
+root = sys.argv[1]
+if not os.path.isdir(root):
+    print("none")
+    raise SystemExit
+h = hashlib.sha256()
+for dirpath, _, files in os.walk(root):
+    for name in sorted(files):
+        if name == "SKILL.md":
+            path = os.path.join(dirpath, name)
+            st = os.stat(path)
+            h.update(f"{path}:{st.st_mtime_ns}\n".encode())
+print(h.hexdigest()[:16])
+PY
+}
+
+# Run skills-sync only when skills/ changed (override: SUBRO_FORCE_SKILLS_SYNC=1).
+subro_maybe_skills_sync() {
+  local root="${1:?}"
+  local stamp_file="${root}/.broker/.skills-sync-stamp"
+  local fp
+
+  if [[ "${SUBRO_FORCE_SKILLS_SYNC:-}" == "1" ]]; then
+    "$root/bin/skills-sync" >/dev/null 2>&1 || true
+    fp="$(subro_skills_fingerprint "$root")"
+    mkdir -p "${root}/.broker"
+    printf '%s' "$fp" >"$stamp_file"
+    return 0
+  fi
+
+  fp="$(subro_skills_fingerprint "$root")"
+  if [[ -f "$stamp_file" && "$(cat "$stamp_file")" == "$fp" ]]; then
+    return 0
+  fi
+  "$root/bin/skills-sync" >/dev/null 2>&1 || true
+  mkdir -p "${root}/.broker"
+  printf '%s' "$fp" >"$stamp_file"
+}
+
 subro_trim() {
   local s="$1"
   s="${s#"${s%%[![:space:]]*}"}"
@@ -97,6 +162,21 @@ subro_prepare_node_cli_shims() {
 }
 
 # Symlink pi + node into workdir/.agent-bin for sandboxed PATH.
+# Symlink broker interceptors into .agent-bin/ (first on PATH).
+subro_prepare_interceptor_shims() {
+  local workdir="${1:?}" root="${2:?}"
+  local agent_bin="${workdir}/.agent-bin"
+  local interceptors="${root}/interceptors"
+  mkdir -p "$agent_bin"
+  for shim in "$interceptors"/*; do
+    [[ -f "$shim" && -x "$shim" ]] || continue
+    local base
+    base="$(basename "$shim")"
+    [[ "$base" == "_broker_call.py" ]] && continue
+    ln -sf "$shim" "${agent_bin}/${base}"
+  done
+}
+
 subro_prepare_pi_shims() {
   subro_prepare_node_cli_shims "${1:?}" pi
 }
