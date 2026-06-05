@@ -12,4 +12,6 @@ Skill instructions live under `skills/<name>/SKILL.md` (also linked under `.curs
 
 Run `./bin/skills-sync` after adding skills. Use brokered CLIs (e.g. `entur-departures`) — not raw curl for those APIs.
 
+`./bin/agent` syncs skills automatically when `skills/` changed. Verify with `./bin/doctor`.
+
 Available skills directory: `skills/`

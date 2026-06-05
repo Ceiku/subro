@@ -33,8 +33,11 @@ Signed-off-by: Your Name <your.email@example.com>
 
 1. Open an issue or discuss the change
 2. Fork and branch from `main`
-3. Run `./bin/doctor` after broker/skill changes
-4. Open a pull request with a clear description
+3. Run `./bin/setup` if first time; after pulls run `./bin/setup --check`
+4. Run `./bin/doctor` after broker/skill/sandbox changes (auto-starts broker; no LLM)
+5. Open a pull request with a clear description
+
+Optional: test with `SUBRO_SANDBOX=cplt` if you have [Ceiku/cplt](docs/cplt.md) installed.
 
 ## Security
 

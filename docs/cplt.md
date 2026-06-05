@@ -1,26 +1,26 @@
 # Optional cplt sandbox backend
 
-[navikt/cplt](https://github.com/navikt/cplt) is an optional, **externally installed** kernel sandbox
-(MIT license). subro stays on the default **native** backend (Seatbelt on macOS, Landlock on Linux)
-unless you opt in.
+[Ceiku/cplt](https://github.com/Ceiku/cplt) (fork of [navikt/cplt](https://github.com/navikt/cplt)) is an
+optional, **externally installed** kernel sandbox (MIT license). subro stays on the default **native**
+backend (Seatbelt on macOS, Landlock on Linux) unless you opt in.
 
-The broker, interceptors, and skills are unchanged — only `bin/agent-run` chooses which kernel
-sandbox wraps the agent process.
+The broker, interceptors, and skills are unchanged — only `bin/agent-run` chooses which kernel sandbox
+wraps the agent process.
 
 ## When to use it
 
 - Stronger env sanitization and outbound CONNECT proxy (domain/port filtering)
 - Avoid maintaining local Seatbelt/Landlock policy yourself
-- NAV/corporate laptops where cplt is already standard
+- Teams that already standardize on cplt
 
 Default `native` is fine for most subro development and CI.
 
 ## Install cplt (not bundled with subro)
 
 ```bash
-brew install navikt/tap/cplt
-# or: curl -fsSL https://raw.githubusercontent.com/navikt/cplt/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Ceiku/cplt/main/install.sh | bash
 cplt doctor
+cplt trust accept --all   # approve repo .cplt.toml once
 ```
 
 See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for licensing.
@@ -51,6 +51,8 @@ If `cplt` is not on `PATH`, or `cplt` exits non-zero, subro **falls back to nati
 SUBRO_CPLT_BIN=$HOME/.local/bin/cplt
 ```
 
+`./bin/doctor` and `./bin/setup --check` report the resolved cplt path when `SUBRO_SANDBOX=cplt`.
+
 ## Disable kernel sandbox entirely
 
 `SUBRO_NO_SANDBOX=1` skips both native and cplt kernel enforcement (env scrub + broker still apply):
@@ -74,7 +76,7 @@ When `SUBRO_SANDBOX=cplt`, `agent-run` maps harnesses to the correct cplt agent 
 Also:
 
 - Prepends interceptors via `PATH` (`--pass-env PATH`)
-- Grants broker UDS access (`--allow-write` on the broker socket directory)
+- Grants broker UDS access (`--allow-write` on the broker socket directory and socket path)
 - Passes broker/harness vars: `BROKER_SOCK`, `BROKER_SOCKET_TOKEN`, `SUBRO_ROOT`, `PI_*`, `OPENCODE_*`
 
 Disable localhost allowlist: `SUBRO_CPLT_NO_LOCALHOST=1` (pi TUI/print mode will likely break).
@@ -85,9 +87,8 @@ Broker interceptors connect via Unix domain socket (`BROKER_SOCK`). subro passes
 `--allow-write` on the socket **directory** and the socket **path** (matching native Seatbelt's
 literal socket rule).
 
-If `entur-departures` still fails with `PermissionError` on `s.connect()` under
-`--agent shell`, file an issue with [navikt/cplt](https://github.com/navikt/cplt) — UDS connect
-may need a dedicated permission beyond `--allow-write`.
+If `entur-departures` still fails with `PermissionError` on `s.connect()` under cplt, verify
+`./bin/doctor` steps 8–9 or use `SUBRO_SANDBOX=native`.
 
 ## Known upstream: cplt exit code
 
@@ -99,9 +100,9 @@ Privileged tools (`mvn`, broker skills) still run in the **host broker**, not in
 
 ## Per-repo cplt policy (optional)
 
-Copy `.cplt.toml.example` to `.cplt.toml` if you need extra project permissions (localhost ports,
-private registry reads, etc.). Broker socket access is handled by `agent-run` flags — you do not need
-to duplicate that in TOML.
+Copy [`.cplt.toml.example`](../.cplt.toml.example) to `.cplt.toml` if you need extra project
+permissions (localhost ports, private registry reads, etc.). Broker socket access is handled by
+`agent-run` flags — you do not need to duplicate that in TOML.
 
 ```bash
 cp .cplt.toml.example .cplt.toml

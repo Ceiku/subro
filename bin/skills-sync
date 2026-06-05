@@ -71,6 +71,8 @@ Skill instructions live under \`skills/<name>/SKILL.md\` (also linked under \`.c
 
 Run \`./bin/skills-sync\` after adding skills. Use brokered CLIs (e.g. \`entur-departures\`) — not raw curl for those APIs.
 
+\`./bin/agent\` syncs skills automatically when \`skills/\` changed. Verify with \`./bin/doctor\`.
+
 Available skills directory: \`skills/\`
 EOF
 
@@ -79,13 +81,21 @@ AGENTS_MD="${ROOT}/AGENTS.md"
 {
   echo "# Agent instructions (subro)"
   echo
-  echo "Sandboxed agent runtime with broker-mediated tools. Start with:"
+  echo "Kernel-sandboxed agent runtime with broker-mediated tools."
+  echo
+  echo "## Start"
   echo
   echo '```bash'
-  echo "./bin/agent bash   # or: ./bin/agent pi | ./bin/agent opencode"
+  echo "./bin/agent bash      # sandboxed shell"
+  echo "./bin/agent pi        # pi coding agent"
+  echo "./bin/agent opencode  # OpenCode agent"
   echo '```'
   echo
+  echo "Run from any project directory under \`BROKER_ALLOWED_ROOTS\` (not only this repo)."
+  echo
   echo "## Skills"
+  echo
+  echo "Brokered CLI skills (use these — not raw \`curl\` for the same APIs):"
   echo
   for skill_dir in "$SKILLS_SRC"/*; do
     [[ -d "$skill_dir" ]] || continue
@@ -95,6 +105,9 @@ AGENTS_MD="${ROOT}/AGENTS.md"
   done
   echo
   echo "Run \`./bin/skills-sync\` after adding or changing skills."
+  echo "\`./bin/agent\` runs skills-sync automatically when \`skills/\` changed."
+  echo
+  echo "See [README.md](README.md) for doctor, setup --check, apm, and optional cplt sandbox."
 } >"$AGENTS_MD"
 
 # shellcheck source=bin/_lib.sh

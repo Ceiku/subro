@@ -37,7 +37,7 @@ Status legend: `done` | `partial` | `todo`
 |----|------|--------|-------|
 | P3.1 | README overhaul (remove repo-create boilerplate) | done | |
 | P3.2 | `setup` generates socket token | done | |
-| P3.3 | Linux Landlock CI / real binary | done | vendored `tools/landlock-restrict`, `bin/build-landlock-restrict`, doctor/setup detection, `.github/workflows/linux-landlock.yml` |
+| P3.3 | Linux Landlock helper | partial | `landlock-restrict` on PATH or `SUBRO_LANDLOCK_RESTRICT`; vendored build not yet in tree |
 | P3.4 | Integration test script | todo | |
 | P3.4a | Doctor auto-start broker + pi smoke (no LLM) | done | Cold-start doctor; `pi --help` / `pi list` |
 | P3.4b | `setup --check` version stamp | done | Post-upgrade visibility |
@@ -52,10 +52,10 @@ Status legend: `done` | `partial` | `todo`
 | P3.12 | First-class `./bin/agent opencode` integration | done | shims, `OPENCODE_*_DIR`, `--global-opencode` |
 | P3.13 | Harness sandbox write allowlist (pi/opencode host dirs) | done | `~/.pi/agent`, `OPENCODE_*` dirs writable in harness modes |
 | P3.14 | Pi loopback bind in Seatbelt (TUI / print mode) | done | `network-bind` + inbound on `localhost:*`, pi mode only |
-| P3.15 | Optional cplt sandbox backend (`SUBRO_SANDBOX=cplt`) | done | External MIT binary; native remains default; see `docs/cplt.md` |
-| P3.16 | cplt PATH resolution + exec fallback | done | Resolve `cplt` before sandbox PATH; fall back on non-zero exit |
-| P3.17 | cplt harness agent mapping | done | `pi`/`opencode`/`bash -lc` → correct `--agent`; localhost for pi |
-| P3.18 | cplt broker UDS socket literal `--allow-write` | partial | dir + sock path; shell-mode UDS may still need cplt upstream |
+| P3.15 | Optional cplt sandbox backend (`SUBRO_SANDBOX=cplt`) | done | [Ceiku/cplt](https://github.com/Ceiku/cplt); thin wrapper in `agent-run`; see `docs/cplt.md` |
+| P3.16 | cplt broker UDS via `--allow-write` (dir + socket path) | done | matches native Seatbelt literal socket rule |
+| P3.17 | cplt PATH resolution + native fallback on exec failure | done | `subro_cplt_bin()` before PATH scrub; `SUBRO_CPLT_BIN` override |
+| P3.18 | cplt harness `--agent` mapping (pi / opencode / shell) | done | `subro_run_cplt_sandbox` in `bin/_lib.sh` |
 
 ## P4 — Future (from planning doc)
 
