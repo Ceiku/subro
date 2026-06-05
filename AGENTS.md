@@ -21,4 +21,4 @@ Brokered CLI skills (use these — not raw `curl` for the same APIs):
 Run `./bin/skills-sync` after adding or changing skills.
 `./bin/agent` runs skills-sync automatically when `skills/` changed.
 
-See [README.md](README.md) for doctor, setup --check, apm, and optional cplt sandbox.
+See [README.md](README.md) for doctor, setup --check, apm, and cplt sandbox (default).

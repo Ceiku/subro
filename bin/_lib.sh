@@ -259,15 +259,15 @@ subro_landlock_restrict_bin() {
   command -v landlock-restrict 2>/dev/null || true
 }
 
-# Sandbox backend: native (Seatbelt/Landlock) or optional external cplt (MIT).
-# Set SUBRO_SANDBOX in ~/.config/agent-broker/env. Default: native.
+# Sandbox backend: Ceiku/cplt (default) or native (Seatbelt/Landlock).
+# Set SUBRO_SANDBOX in ~/.config/agent-broker/env. Default: cplt.
 subro_sandbox_backend() {
-  local b="${SUBRO_SANDBOX:-native}"
+  local b="${SUBRO_SANDBOX:-cplt}"
   case "$b" in
     native | cplt) printf '%s' "$b" ;;
     *)
-      echo "subro: unknown SUBRO_SANDBOX=${b}; using native" >&2
-      printf 'native'
+      echo "subro: unknown SUBRO_SANDBOX=${b}; using cplt" >&2
+      printf 'cplt'
       ;;
   esac
 }
@@ -322,7 +322,7 @@ subro_cplt_map_harness() {
   esac
 }
 
-# Run the agent command under navikt/cplt (external binary). Caller exports harness
+# Run the agent command under Ceiku/cplt (external binary). Caller exports harness
 # env vars before invoking. Does not nest with native Seatbelt/Landlock.
 # cplt_bin must be an absolute or host-PATH-resolved path — not looked up after PATH is scrubbed.
 subro_run_cplt_sandbox() {

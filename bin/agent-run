@@ -220,8 +220,8 @@ if [[ "${SUBRO_NO_SANDBOX:-}" != "1" && "$SANDBOX_BACKEND" == "cplt" ]]; then
     fi
     echo "SUBRO_SANDBOX=cplt: cplt/sandboxed command exited $rc; falling back to native sandbox." >&2
   else
-    echo "SUBRO_SANDBOX=cplt but cplt not found; falling back to native sandbox." >&2
-    echo "  Install: brew install navikt/tap/cplt  (see docs/cplt.md)" >&2
+    echo "cplt not found (default sandbox); falling back to native." >&2
+    echo "  Install: see docs/cplt.md (Ceiku/cplt)" >&2
   fi
 fi
 

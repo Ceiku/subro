@@ -5,7 +5,7 @@ repository.
 
 ## cplt (optional sandbox backend)
 
-When `SUBRO_SANDBOX=cplt` is set, subro executes the [cplt](https://github.com/Ceiku/cplt)
+When `SUBRO_SANDBOX` is unset or `cplt`, subro executes the [cplt](https://github.com/Ceiku/cplt)
 binary if it is installed on the host. cplt is **not** bundled with subro.
 
 - **Project:** https://github.com/Ceiku/cplt (fork of [navikt/cplt](https://github.com/navikt/cplt))
@@ -17,5 +17,5 @@ to subro's own source code.
 
 ## landlock-restrict (native Linux sandbox)
 
-On Linux, the default native backend uses an external `landlock-restrict` helper when available
+On Linux, the native fallback backend uses an external `landlock-restrict` helper when available
 (`SUBRO_LANDLOCK_RESTRICT` or on `PATH`). It is **not** bundled with subro.

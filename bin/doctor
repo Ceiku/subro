@@ -69,20 +69,17 @@ fi
 echo "5) Sandbox backend"
 SANDBOX_BACKEND="$(subro_sandbox_backend)"
 if [[ "$SANDBOX_BACKEND" == "cplt" ]]; then
-  ok "SUBRO_SANDBOX=cplt (navikt/cplt — optional MIT dependency)"
+  ok "SUBRO_SANDBOX=cplt (default — Ceiku/cplt)"
   if subro_cplt_available; then
     ok "cplt at $(subro_cplt_bin) ($(cplt --version 2>/dev/null || echo unknown))"
   else
-    warn "cplt not on PATH (agent-run falls back to native; brew install navikt/tap/cplt)"
+    warn "cplt not found (falls back to native; see docs/cplt.md)"
   fi
 else
-  ok "SUBRO_SANDBOX=native (Seatbelt / Landlock)"
-  if subro_cplt_available; then
-    warn "cplt installed but unused (set SUBRO_SANDBOX=cplt in broker env to enable)"
-  fi
+  ok "SUBRO_SANDBOX=native (Seatbelt / Landlock fallback)"
 fi
 
-echo "6) Kernel sandbox (native backend)"
+echo "6) Kernel sandbox (native fallback)"
 case "$(uname -s)" in
   Darwin)
     if command -v sandbox-exec >/dev/null 2>&1; then

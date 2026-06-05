@@ -1,21 +1,13 @@
 # Optional cplt sandbox backend
 
-[Ceiku/cplt](https://github.com/Ceiku/cplt) (fork of [navikt/cplt](https://github.com/navikt/cplt)) is an
-optional, **externally installed** kernel sandbox (MIT license). subro stays on the default **native**
-backend (Seatbelt on macOS, Landlock on Linux) unless you opt in.
+[Ceiku/cplt](https://github.com/Ceiku/cplt) (fork of [navikt/cplt](https://github.com/navikt/cplt)) is the **default**
+kernel sandbox (MIT license, not bundled). subro uses native Seatbelt/Landlock only when cplt is
+unavailable or you set `SUBRO_SANDBOX=native`.
 
 The broker, interceptors, and skills are unchanged — only `bin/agent-run` chooses which kernel sandbox
 wraps the agent process.
 
-## When to use it
-
-- Stronger env sanitization and outbound CONNECT proxy (domain/port filtering)
-- Avoid maintaining local Seatbelt/Landlock policy yourself
-- Teams that already standardize on cplt
-
-Default `native` is fine for most subro development and CI.
-
-## Install cplt (not bundled with subro)
+## Install cplt (required for default sandbox)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Ceiku/cplt/main/install.sh | bash
@@ -25,20 +17,12 @@ cplt trust accept --all   # approve repo .cplt.toml once
 
 See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for licensing.
 
-## Enable in subro
+## Opt out to native
 
 Add to `~/.config/agent-broker/env`:
 
 ```bash
-SUBRO_SANDBOX=cplt
-```
-
-Then run agents as usual:
-
-```bash
-./bin/agent bash
-./bin/agent pi
-./bin/doctor
+SUBRO_SANDBOX=native
 ```
 
 If `cplt` is not on `PATH`, or `cplt` exits non-zero, subro **falls back to native** and prints a warning.
@@ -51,11 +35,11 @@ If `cplt` is not on `PATH`, or `cplt` exits non-zero, subro **falls back to nati
 SUBRO_CPLT_BIN=$HOME/.local/bin/cplt
 ```
 
-`./bin/doctor` and `./bin/setup --check` report the resolved cplt path when `SUBRO_SANDBOX=cplt`.
+`./bin/doctor` and `./bin/setup --check` report the resolved cplt path when using the default backend.
 
 ## Disable kernel sandbox entirely
 
-`SUBRO_NO_SANDBOX=1` skips both native and cplt kernel enforcement (env scrub + broker still apply):
+`SUBRO_NO_SANDBOX=1` skips both cplt and native kernel enforcement (env scrub + broker still apply):
 
 ```bash
 SUBRO_NO_SANDBOX=1 ./bin/agent bash
@@ -63,7 +47,7 @@ SUBRO_NO_SANDBOX=1 ./bin/agent bash
 
 ## What subro passes to cplt
 
-When `SUBRO_SANDBOX=cplt`, `agent-run` maps harnesses to the correct cplt agent (do not use
+When the default backend is active, `agent-run` maps harnesses to the correct cplt agent (do not use
 `--agent shell` for `pi` — it cannot exec bare command names):
 
 | subro command | cplt invocation |
@@ -109,7 +93,3 @@ cp .cplt.toml.example .cplt.toml
 # edit, then if using [propose] entries:
 cplt trust accept --all
 ```
-
-## Switch back to native
-
-Remove or comment out `SUBRO_SANDBOX=cplt` in the broker env file (default is `native`).

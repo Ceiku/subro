@@ -107,7 +107,7 @@ AGENTS_MD="${ROOT}/AGENTS.md"
   echo "Run \`./bin/skills-sync\` after adding or changing skills."
   echo "\`./bin/agent\` runs skills-sync automatically when \`skills/\` changed."
   echo
-  echo "See [README.md](README.md) for doctor, setup --check, apm, and optional cplt sandbox."
+  echo "See [README.md](README.md) for doctor, setup --check, apm, and cplt sandbox (default)."
 } >"$AGENTS_MD"
 
 # shellcheck source=bin/_lib.sh

@@ -52,7 +52,7 @@ Status legend: `done` | `partial` | `todo`
 | P3.12 | First-class `./bin/agent opencode` integration | done | shims, `OPENCODE_*_DIR`, `--global-opencode` |
 | P3.13 | Harness sandbox write allowlist (pi/opencode host dirs) | done | `~/.pi/agent`, `OPENCODE_*` dirs writable in harness modes |
 | P3.14 | Pi loopback bind in Seatbelt (TUI / print mode) | done | `network-bind` + inbound on `localhost:*`, pi mode only |
-| P3.15 | Optional cplt sandbox backend (`SUBRO_SANDBOX=cplt`) | done | [Ceiku/cplt](https://github.com/Ceiku/cplt); thin wrapper in `agent-run`; see `docs/cplt.md` |
+| P3.15 | cplt sandbox backend as default (`SUBRO_SANDBOX` unset → cplt) | done | [Ceiku/cplt](https://github.com/Ceiku/cplt); falls back to native; see `docs/cplt.md` |
 | P3.16 | cplt broker UDS via `--allow-write` (dir + socket path) | done | matches native Seatbelt literal socket rule |
 | P3.17 | cplt PATH resolution + native fallback on exec failure | done | `subro_cplt_bin()` before PATH scrub; `SUBRO_CPLT_BIN` override |
 | P3.18 | cplt harness `--agent` mapping (pi / opencode / shell) | done | `subro_run_cplt_sandbox` in `bin/_lib.sh` |

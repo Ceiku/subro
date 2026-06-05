@@ -37,7 +37,10 @@ Signed-off-by: Your Name <your.email@example.com>
 4. Run `./bin/doctor` after broker/skill/sandbox changes (auto-starts broker; no LLM)
 5. Open a pull request with a clear description
 
-Optional: test with `SUBRO_SANDBOX=cplt` if you have [Ceiku/cplt](docs/cplt.md) installed.
+## cplt sandbox (default)
+
+Ceiku/cplt is the default kernel sandbox. Install per [docs/cplt.md](docs/cplt.md).
+Test native fallback with `SUBRO_SANDBOX=native`.
 
 ## Security
 

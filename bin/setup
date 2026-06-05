@@ -46,10 +46,10 @@ subro_setup_check() {
   else
     echo "  broker:      not running (on-demand via ./bin/agent or ./bin/doctor)"
   fi
-  echo "  sandbox:     ${SUBRO_SANDBOX:-native}"
-  if [[ "${SUBRO_SANDBOX:-native}" == "cplt" ]] && subro_cplt_available; then
+  echo "  sandbox:     ${SUBRO_SANDBOX:-cplt} (default: cplt)"
+  if [[ "$(subro_sandbox_backend)" == "cplt" ]] && subro_cplt_available; then
     echo "  cplt:        $(subro_cplt_bin)"
-  elif [[ "${SUBRO_SANDBOX:-native}" == "cplt" ]]; then
+  elif [[ "$(subro_sandbox_backend)" == "cplt" ]]; then
     echo "  cplt:        not found (will fall back to native)"
   fi
   echo
@@ -94,8 +94,8 @@ BROKER_ALLOWED_ROOTS="${HOME}/dev,${HOME}/work"
 # Optional: audit log path (default ~/.config/agent-broker/audit.jsonl):
 # BROKER_AUDIT_LOG=${HOME}/.config/agent-broker/audit.jsonl
 
-# Optional sandbox backend: native (default) or cplt — see docs/cplt.md
-# SUBRO_SANDBOX=native
+# Sandbox backend: cplt (default) or native — see docs/cplt.md
+# SUBRO_SANDBOX=native   # opt out of Ceiku/cplt
 EOF
   chmod 600 "$BROKER_ENV_FILE" || true
   echo "Created: $BROKER_ENV_FILE (with BROKER_SOCKET_TOKEN)"
@@ -139,10 +139,12 @@ echo "     ./bin/skills-sync --global-pi        # ~/.pi/agent/settings.json"
 echo "     ./bin/skills-sync --global-opencode  # ~/.config/opencode/skills/"
 echo "5) Run sandboxed agent: ./bin/agent pi | ./bin/agent opencode"
 echo
-echo "Optional: use navikt/cplt as sandbox backend (brew install navikt/tap/cplt),"
-echo "  then set SUBRO_SANDBOX=cplt in $BROKER_ENV_FILE — see docs/cplt.md"
-if command -v cplt >/dev/null 2>&1; then
-  echo "  cplt: installed ($(cplt --version 2>/dev/null || echo unknown))"
+echo "6) Install Ceiku/cplt (default sandbox — see docs/cplt.md):"
+echo "     curl -fsSL https://raw.githubusercontent.com/Ceiku/cplt/main/install.sh | bash"
+echo "     cplt trust accept --all"
+if subro_cplt_available; then
+  echo "  cplt: installed at $(subro_cplt_bin) ($(cplt --version 2>/dev/null || echo unknown))"
 else
-  echo "  cplt: not installed"
+  echo "  cplt: not installed (subro falls back to native Seatbelt/Landlock)"
 fi
+echo "   Opt out: set SUBRO_SANDBOX=native in $BROKER_ENV_FILE"

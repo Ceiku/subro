@@ -1,5 +1,4 @@
-# Optional per-repo cplt overrides when SUBRO_SANDBOX=cplt is set in ~/.config/agent-broker/env.
-# Copy to .cplt.toml and adjust. See docs/cplt.md.
+# Optional per-repo cplt overrides (default sandbox is Ceiku/cplt). Copy to .cplt.toml and adjust.
 #
 # Broker UDS access is configured automatically by ./bin/agent-run via
 # --allow-write on the socket directory and socket path. You only need this file for

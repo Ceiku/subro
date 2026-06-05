@@ -8,6 +8,7 @@ A **sandboxed agent process** runs with a scrubbed environment and kernel filesy
 
 ```bash
 ./bin/setup
+# Install Ceiku/cplt (default sandbox): see docs/cplt.md
 # Edit ~/.config/agent-broker/env — set BROKER_ALLOWED_ROOTS (see table below)
 ./bin/doctor
 ./bin/agent pi            # or: ./bin/agent bash | ./bin/agent opencode
@@ -31,7 +32,7 @@ All settings live in `~/.config/agent-broker/env` (created by `./bin/setup`).
 | `BROKER_SOCK` | no | Override socket path (defaults below) |
 | `BROKER_AUDIT_LOG` | no | JSONL audit trail (default `~/.config/agent-broker/audit.jsonl`) |
 | `BROKER_SCRUB_PII` | no | Set `0` to disable regex PII scrubbing on broker output (default on) |
-| `SUBRO_SANDBOX` | no | `native` (default) or `cplt` — see [docs/cplt.md](docs/cplt.md) |
+| `SUBRO_SANDBOX` | no | `cplt` (default) or `native` — see [docs/cplt.md](docs/cplt.md) |
 | `SUBRO_CPLT_BIN` | no | Absolute path to `cplt` when not on default `PATH` |
 | `ENTUR_CLIENT_NAME` | no | Client name for the Entur showcase skill (default `subro-agent-broker`) |
 
@@ -44,7 +45,8 @@ Debug without kernel sandbox: `SUBRO_NO_SANDBOX=1 ./bin/agent bash` (env scrub +
 | **Run pi, OpenCode, or Cursor** | [Harness integration](#harness-integration-pi--opencode--cursor) below |
 | **Try a broker skill (no LLM)** | `./bin/agent-run bash -lc 'entur-departures jernbanetorget'` → [Showcase skill](#showcase-skill-entur-departures-read-only-api) |
 | **Add or install a skill** | [Adding a new skill](#adding-a-new-skill) · `./bin/apm install` · [docs/P1-P4.md](docs/P1-P4.md) |
-| **Optional cplt sandbox** | [docs/cplt.md](docs/cplt.md) — set `SUBRO_SANDBOX=cplt` |
+| **Install cplt (default sandbox)** | [docs/cplt.md](docs/cplt.md) — falls back to native if missing |
+| **Use native Seatbelt/Landlock** | set `SUBRO_SANDBOX=native` in broker env |
 
 ## How it works
 
@@ -118,10 +120,10 @@ Logs: `./.broker/log.txt`. Stale socket? Run `start` again — it removes the ol
 
 | Backend | Set via | Implementation |
 |---------|---------|----------------|
-| **native** (default) | `SUBRO_SANDBOX=native` or unset | macOS Seatbelt; Linux `landlock-restrict` when on `PATH` |
-| **cplt** (optional) | `SUBRO_SANDBOX=cplt` | [Ceiku/cplt](https://github.com/Ceiku/cplt) — see [docs/cplt.md](docs/cplt.md) |
+| **cplt** (default) | unset or `SUBRO_SANDBOX=cplt` | [Ceiku/cplt](https://github.com/Ceiku/cplt) — see [docs/cplt.md](docs/cplt.md) |
+| **native** (fallback) | `SUBRO_SANDBOX=native` | macOS Seatbelt; Linux `landlock-restrict` when on `PATH` |
 
-If `cplt` is missing or exits non-zero, subro falls back to native. On Linux without `landlock-restrict`, native runs without kernel sandbox (warning printed). Override: `SUBRO_LANDLOCK_RESTRICT=/path/to/landlock-restrict`.
+If `cplt` is missing or exits non-zero, subro falls back to native automatically. On Linux without `landlock-restrict`, native runs without kernel sandbox (warning printed). Override: `SUBRO_LANDLOCK_RESTRICT=/path/to/landlock-restrict`.
 
 ```bash
 ./bin/agent-run bash -lc 'which mvn; mvn -v'
