@@ -337,12 +337,10 @@ subro_run_cplt_sandbox() {
     return 2
   fi
 
-  local sock_dir
-  sock_dir="$(dirname "$sock")"
-  # Broker UDS: directory + socket inode (Seatbelt uses literal write on SOCK; dir alone is not enough).
-  local -a cplt_args=(--agent "$CPLT_AGENT" -y --allow-write "$sock_dir")
+  # Broker UDS: connect-only via --allow-unix-socket (Ceiku/cplt; --allow-write no longer grants connect).
+  local -a cplt_args=(--agent "$CPLT_AGENT" -y)
   if [[ -n "$sock" ]]; then
-    cplt_args+=(--allow-write "$sock")
+    cplt_args+=(--allow-unix-socket "$sock")
   fi
 
   # pi / opencode need loopback (TUI, harness IPC). Disable with SUBRO_CPLT_NO_LOCALHOST=1.
