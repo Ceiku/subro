@@ -93,10 +93,15 @@ def install_package(pkg_dir: Path, repo_root: Path) -> Dict[str, Any]:
     _copy_if_different(interceptor_src, interceptor_dest)
     interceptor_dest.chmod(0o755)
 
+    try:
+        source_rel = str(pkg_dir.resolve().relative_to(repo_root.resolve()))
+    except ValueError:
+        source_rel = str(pkg_dir.name)
+
     entry = {
         "name": name,
         "version": version,
-        "source": str(pkg_dir.resolve()),
+        "source": source_rel,
         "installed_at": datetime.now(timezone.utc).isoformat(),
         "files": {
             "skill_md": _sha256_file(skill_dest / "SKILL.md"),
