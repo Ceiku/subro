@@ -194,6 +194,19 @@ Make scripts executable:
 chmod +x bin/* interceptors/*
 ```
 
+## License (Fair Source — FSL-1.1-ALv2)
+
+SPDX: `FSL-1.1-ALv2`
+
+Licensed under the [Functional Source License, Version 1.1, ALv2 Future
+License](LICENSE). This is **fair source**: use and modify freely for permitted
+purposes; **competing commercial use** is restricted until each version converts
+to **Apache 2.0** two years after release (DOSP).
+
+- Summary: [FAIR-SOURCE.md](FAIR-SOURCE.md)
+- Trademarks: [TRADEMARK.md](TRADEMARK.md)
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+
 ## Roadmap
 
 See [docs/TODO.md](docs/TODO.md) for prioritized security and platform work.

@@ -3,6 +3,7 @@ broker/.venv/
 .agent-home/
 .agent-path/
 .agent-bin/
+.agent-skills/
 .cursor/skills/
 .pi/skills/
 .agents/skills/

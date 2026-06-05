@@ -39,6 +39,7 @@ Status legend: `done` | `partial` | `todo`
 | P3.2 | `setup` generates socket token | done | |
 | P3.3 | Linux Landlock CI / real binary | todo | |
 | P3.4 | Integration test script | todo | |
+| P3.5 | Fair Source license (FSL-1.1-ALv2) | done | `LICENSE`, `FAIR-SOURCE.md`, `CONTRIBUTING.md`, `TRADEMARK.md` |
 
 ## P4 — Future (from planning doc)
 
