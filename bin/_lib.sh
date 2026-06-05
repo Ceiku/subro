@@ -309,7 +309,8 @@ subro_cplt_map_harness() {
       if [[ "${1:-}" == "-lc" || "${1:-}" == "-c" ]]; then
         shift
         [[ $# -ge 1 ]] || return 2
-        CPLT_CMD=(-c "$1")
+        # Propagate inner exit code when cplt forwards shell status.
+        CPLT_CMD=(-c "$1; __subro_rc=\$?; exit \$__subro_rc")
       elif [[ $# -gt 0 ]]; then
         CPLT_CMD=("$@")
       fi
@@ -338,7 +339,11 @@ subro_run_cplt_sandbox() {
 
   local sock_dir
   sock_dir="$(dirname "$sock")"
+  # Broker UDS: directory + socket inode (Seatbelt uses literal write on SOCK; dir alone is not enough).
   local -a cplt_args=(--agent "$CPLT_AGENT" -y --allow-write "$sock_dir")
+  if [[ -n "$sock" ]]; then
+    cplt_args+=(--allow-write "$sock")
+  fi
 
   # pi / opencode need loopback (TUI, harness IPC). Disable with SUBRO_CPLT_NO_LOCALHOST=1.
   if [[ "$CPLT_AGENT" == "pi" || "$CPLT_AGENT" == "opencode" ]]; then

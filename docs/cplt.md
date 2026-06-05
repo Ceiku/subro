@@ -79,6 +79,22 @@ Also:
 
 Disable localhost allowlist: `SUBRO_CPLT_NO_LOCALHOST=1` (pi TUI/print mode will likely break).
 
+## Broker UDS under cplt
+
+Broker interceptors connect via Unix domain socket (`BROKER_SOCK`). subro passes both
+`--allow-write` on the socket **directory** and the socket **path** (matching native Seatbelt's
+literal socket rule).
+
+If `entur-departures` still fails with `PermissionError` on `s.connect()` under
+`--agent shell`, file an issue with [navikt/cplt](https://github.com/navikt/cplt) — UDS connect
+may need a dedicated permission beyond `--allow-write`.
+
+## Known upstream: cplt exit code
+
+cplt may return **exit 0** when the sandboxed inner command fails. subro only falls back to
+native when the combined exit code is non-zero. If you see success without broker output, verify
+with `./bin/agent-run bash -lc 'entur-departures --help'` or use `SUBRO_SANDBOX=native`.
+
 Privileged tools (`mvn`, broker skills) still run in the **host broker**, not inside cplt.
 
 ## Per-repo cplt policy (optional)

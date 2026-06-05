@@ -120,6 +120,8 @@ fi
 echo "8) In-sandbox broker UDS (entur-departures --help)"
 if "$ROOT/bin/agent-run" bash -lc 'entur-departures --help >/dev/null' 2>/dev/null; then
   ok "sandbox can reach broker via UDS"
+elif [[ "$(subro_sandbox_backend)" == "cplt" ]]; then
+  bad "broker UDS failed under SUBRO_SANDBOX=cplt (see docs/cplt.md — socket policy)"
 else
   bad "in-sandbox broker call failed (broker down, token mismatch, or Seatbelt socket deny)"
 fi
@@ -127,6 +129,8 @@ fi
 echo "9) In-sandbox entur-departures smoke"
 if "$ROOT/bin/agent-run" bash -lc 'entur-departures jernbanetorget 1 >/dev/null' 2>/dev/null; then
   ok "sandbox entur-departures returned data"
+elif [[ "$(subro_sandbox_backend)" == "cplt" ]]; then
+  bad "entur smoke failed under SUBRO_SANDBOX=cplt (broker UDS policy? try native or see docs/cplt.md)"
 else
   warn "entur smoke call failed (network/API or broker policy; --help test above is the critical check)"
 fi

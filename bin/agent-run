@@ -213,11 +213,12 @@ SANDBOX_BACKEND="$(subro_sandbox_backend)"
 if [[ "${SUBRO_NO_SANDBOX:-}" != "1" && "$SANDBOX_BACKEND" == "cplt" ]]; then
   CPLT_BIN="$(subro_cplt_bin)"
   if [[ -n "$CPLT_BIN" ]]; then
-    if subro_run_cplt_sandbox "$SANDBOX_PATH" "$SOCK" "$ROOT" "$CPLT_BIN" "$@"; then
+    subro_run_cplt_sandbox "$SANDBOX_PATH" "$SOCK" "$ROOT" "$CPLT_BIN" "$@"
+    rc=$?
+    if [[ "$rc" -eq 0 ]]; then
       exit 0
     fi
-    rc=$?
-    echo "SUBRO_SANDBOX=cplt: cplt exited $rc; falling back to native sandbox." >&2
+    echo "SUBRO_SANDBOX=cplt: cplt/sandboxed command exited $rc; falling back to native sandbox." >&2
   else
     echo "SUBRO_SANDBOX=cplt but cplt not found; falling back to native sandbox." >&2
     echo "  Install: brew install navikt/tap/cplt  (see docs/cplt.md)" >&2
