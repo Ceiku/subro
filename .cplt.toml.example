@@ -10,7 +10,8 @@
 
 [propose]
 # Permissions that require: cplt trust accept --all
-# allow_localhost_any = true   # Next.js / Vite ephemeral ports
+# subro passes --allow-localhost-any for pi/opencode by default (TUI / harness IPC).
+# allow_localhost_any = true   # also in .cplt.toml if you run cplt directly without subro
 # allow_jvm_attach = true      # MockK / Mockito inline
 
 [propose.allow]

@@ -61,12 +61,23 @@ SUBRO_NO_SANDBOX=1 ./bin/agent bash
 
 ## What subro passes to cplt
 
-When `SUBRO_SANDBOX=cplt`, `agent-run`:
+When `SUBRO_SANDBOX=cplt`, `agent-run` maps harnesses to the correct cplt agent (do not use
+`--agent shell` for `pi` — it cannot exec bare command names):
 
-- Invokes `cplt --agent shell` (no nested native sandbox)
+| subro command | cplt invocation |
+|---------------|-----------------|
+| `pi …` | `cplt --agent pi …` + `--allow-localhost-any` |
+| `opencode …` | `cplt --agent opencode …` + `--allow-localhost-any` |
+| `bash -lc 'cmd'` | `cplt --agent shell -- -c 'cmd'` |
+| `bash` (interactive) | `cplt --agent shell` |
+
+Also:
+
 - Prepends interceptors via `PATH` (`--pass-env PATH`)
 - Grants broker UDS access (`--allow-write` on the broker socket directory)
 - Passes broker/harness vars: `BROKER_SOCK`, `BROKER_SOCKET_TOKEN`, `SUBRO_ROOT`, `PI_*`, `OPENCODE_*`
+
+Disable localhost allowlist: `SUBRO_CPLT_NO_LOCALHOST=1` (pi TUI/print mode will likely break).
 
 Privileged tools (`mvn`, broker skills) still run in the **host broker**, not inside cplt.
 

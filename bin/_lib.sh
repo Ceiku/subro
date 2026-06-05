@@ -285,6 +285,42 @@ subro_cplt_available() {
   [[ -n "$(subro_cplt_bin)" ]]
 }
 
+# Map subro harness argv to cplt --agent mode. cplt --agent shell cannot exec bare
+# command names (e.g. "pi", "bash"); use pi/opencode agents or shell -c instead.
+# Sets: cplt_agent (string), cplt_cmd (array, may be empty for interactive shell).
+subro_cplt_map_harness() {
+  local harness="${1:?}"
+  shift
+
+  CPLT_AGENT=""
+  CPLT_CMD=()
+
+  case "$harness" in
+    pi)
+      CPLT_AGENT=pi
+      CPLT_CMD=("$@")
+      ;;
+    opencode)
+      CPLT_AGENT=opencode
+      CPLT_CMD=("$@")
+      ;;
+    bash)
+      CPLT_AGENT=shell
+      if [[ "${1:-}" == "-lc" || "${1:-}" == "-c" ]]; then
+        shift
+        [[ $# -ge 1 ]] || return 2
+        CPLT_CMD=(-c "$1")
+      elif [[ $# -gt 0 ]]; then
+        CPLT_CMD=("$@")
+      fi
+      ;;
+    *)
+      CPLT_AGENT=shell
+      CPLT_CMD=("$harness" "$@")
+      ;;
+  esac
+}
+
 # Run the agent command under navikt/cplt (external binary). Caller exports harness
 # env vars before invoking. Does not nest with native Seatbelt/Landlock.
 # cplt_bin must be an absolute or host-PATH-resolved path — not looked up after PATH is scrubbed.
@@ -295,9 +331,21 @@ subro_run_cplt_sandbox() {
   local cplt_bin="$4"
   shift 4
 
+  if ! subro_cplt_map_harness "$@"; then
+    echo "subro: invalid cplt harness invocation" >&2
+    return 2
+  fi
+
   local sock_dir
   sock_dir="$(dirname "$sock")"
-  local -a cplt_args=(--agent shell -y --allow-write "$sock_dir")
+  local -a cplt_args=(--agent "$CPLT_AGENT" -y --allow-write "$sock_dir")
+
+  # pi / opencode need loopback (TUI, harness IPC). Disable with SUBRO_CPLT_NO_LOCALHOST=1.
+  if [[ "$CPLT_AGENT" == "pi" || "$CPLT_AGENT" == "opencode" ]]; then
+    if [[ "${SUBRO_CPLT_NO_LOCALHOST:-}" != "1" ]]; then
+      cplt_args+=(--allow-localhost-any)
+    fi
+  fi
 
   # Env for the sandboxed child (--pass-env). Do not use this PATH to find cplt.
   export PATH="$sandbox_path"
@@ -314,7 +362,11 @@ subro_run_cplt_sandbox() {
   [[ -n "${OPENCODE_STATE_DIR:-}" ]] && cplt_args+=(--pass-env OPENCODE_STATE_DIR)
   [[ -n "${OPENCODE_CONFIG:-}" ]] && cplt_args+=(--pass-env OPENCODE_CONFIG)
 
-  "$cplt_bin" "${cplt_args[@]}" -- "$@"
+  if [[ ${#CPLT_CMD[@]} -eq 0 ]]; then
+    "$cplt_bin" "${cplt_args[@]}"
+  else
+    "$cplt_bin" "${cplt_args[@]}" -- "${CPLT_CMD[@]}"
+  fi
 }
 
 # Print one-line Landlock status for doctor/setup. Returns 0 when usable.

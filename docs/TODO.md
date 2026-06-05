@@ -54,6 +54,7 @@ Status legend: `done` | `partial` | `todo`
 | P3.14 | Pi loopback bind in Seatbelt (TUI / print mode) | done | `network-bind` + inbound on `localhost:*`, pi mode only |
 | P3.15 | Optional cplt sandbox backend (`SUBRO_SANDBOX=cplt`) | done | External MIT binary; native remains default; see `docs/cplt.md` |
 | P3.16 | cplt PATH resolution + exec fallback | done | Resolve `cplt` before sandbox PATH; fall back on non-zero exit |
+| P3.17 | cplt harness agent mapping | done | `pi`/`opencode`/`bash -lc` → correct `--agent`; localhost for pi |
 
 ## P4 — Future (from planning doc)
 
