@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-05  
 **Repo:** `Ceiku/subro` (currently **private**)  
-**Verdict:** Safe to make public **after** optional history scrub (see below). No credentials found in tree or history.
+**Verdict:** Safe to make public. No credentials found in tree or history; history scrub completed.
 
 ## Current tree (HEAD) — PASS
 
@@ -15,12 +15,12 @@
 | Local skill symlinks (`.cursor/skills`, etc.) | Not tracked |
 | Hardcoded secrets in code | Only placeholders (`X-PROD-KEY`) and scrub patterns |
 
-## Git history — MINOR ISSUES
+## Git history — CLEAN (post-scrub)
 
 | Item | Severity | Status |
 |------|----------|--------|
-| `subro.lock.json` contained `a machine-specific path...` | Low (path metadata) | **Fixed in HEAD**; still in old commits |
-| `.agent-skills/demo.py` (harmless test script) | Low | Removed in `b62d1d3` but **still in history** (`55dbf53`) |
+| `subro.lock.json` contained machine-specific absolute paths | Low (path metadata) | **Scrubbed from history** (`git filter-repo`) |
+| `.agent-skills/demo.py` (harmless test script) | Low | **Removed from history** (`git filter-repo`) |
 | Commit author email `daniels@aboveit.no` | Info | **Permanent in git history** unless rewritten |
 | `Co-authored-by: Cursor` on one commit | Info | Not sensitive |
 
@@ -32,25 +32,9 @@ Ignores: `.broker/`, `.venv`, `.agent-*`, harness symlinks, `.env*`, npm/pypi/ne
 
 ## Recommended before `gh repo edit --visibility public`
 
-### 1. Optional: scrub history (recommended)
+### 1. History scrub — DONE (2026-06-05)
 
-Removes home-directory path from lockfile history and test `demo.py` blob:
-
-```bash
-# Requires: brew install git-filter-repo
-# Back up first: git clone --mirror . ../subro-backup.git
-
-# Remove accidental test artifact from history
-git filter-repo --path .agent-skills/demo.py --invert-paths --force
-
-# Scrub home-directory prefix from lockfile (only appears in subro.lock.json)
-printf 'literal:==>\n' > /tmp/subro-scrub.txt
-git filter-repo --replace-text /tmp/subro-scrub.txt --force
-
-git push --force-with-lease origin main
-```
-
-Only run if you are the sole consumer of this repo or have coordinated with collaborators.
+Removed `.agent-skills/demo.py` and rewrote absolute lockfile paths to relative via `git filter-repo`, then force-pushed `main`.
 
 ### 2. Rotate nothing required
 
