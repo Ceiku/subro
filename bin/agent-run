@@ -132,6 +132,9 @@ EOF
   if [[ "${1:-}" == "pi" || "${1:-}" == "opencode" ]]; then
     subro_append_seatbelt_harness_writes "${1}" "$profile_file"
   fi
+  if [[ "${1:-}" == "pi" ]]; then
+    subro_append_seatbelt_pi_loopback "$profile_file"
+  fi
 
   sandbox_env sandbox-exec -f "$profile_file" -- "$@"
   rc=$?
