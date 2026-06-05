@@ -199,10 +199,14 @@ To stop:
 
 ### 2) Run a sandboxed agent command
 
-The sandbox wrapper clears the environment (`env -i`), sets a minimal `PATH` that prefers `./interceptors`, and tries to enforce kernel sandboxing:
+The sandbox wrapper clears the environment (`env -i`), sets a minimal `PATH` that prefers `./interceptors`, and enforces kernel sandboxing via one of two backends (default: **native**):
 
-- macOS: `sandbox-exec` (Seatbelt)
-- Linux: vendored `landlock-restrict` (build with `./bin/build-landlock-restrict`; falls back to unsandboxed if missing)
+| Backend | Set via | Implementation |
+|---------|---------|----------------|
+| **native** (default) | `SUBRO_SANDBOX=native` or unset | macOS `sandbox-exec` (Seatbelt); Linux vendored `landlock-restrict` |
+| **cplt** (optional) | `SUBRO_SANDBOX=cplt` in broker env | External [navikt/cplt](https://github.com/navikt/cplt) binary (MIT, not bundled) |
+
+Optional cplt install: `brew install navikt/tap/cplt`. See [docs/cplt.md](docs/cplt.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). If cplt is requested but missing, subro falls back to native.
 
 On Linux, `./bin/setup` tries to build the vendored helper automatically. Override with `SUBRO_LANDLOCK_RESTRICT=/path/to/landlock-restrict`. See [tools/landlock-restrict/README.md](tools/landlock-restrict/README.md).
 

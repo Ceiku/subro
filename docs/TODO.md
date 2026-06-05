@@ -49,6 +49,7 @@ Status legend: `done` | `partial` | `todo`
 | P3.12 | First-class `./bin/agent opencode` integration | done | shims, `OPENCODE_*_DIR`, `--global-opencode` |
 | P3.13 | Harness sandbox write allowlist (pi/opencode host dirs) | done | `~/.pi/agent`, `OPENCODE_*` dirs writable in harness modes |
 | P3.14 | Pi loopback bind in Seatbelt (TUI / print mode) | done | `network-bind` + inbound on `localhost:*`, pi mode only |
+| P3.15 | Optional cplt sandbox backend (`SUBRO_SANDBOX=cplt`) | done | External MIT binary; native remains default; see `docs/cplt.md` |
 
 ## P4 — Future (from planning doc)
 
