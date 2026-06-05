@@ -1,5 +1,7 @@
 # Kernel-sandboxed agent + privileged broker (UDS)
 
+> **Work in progress — proof of concept.** This project is experimental and not production-ready. APIs, sandbox policies, and broker behavior may change without notice. Use it to explore the architecture and provide feedback; do not rely on it for security-critical workloads yet.
+
 This repo provides a **local, high-performance tool-execution split**:
 
 - A **sandboxed agent process** runs with a scrubbed environment and kernel-level filesystem restrictions.
