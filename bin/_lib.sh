@@ -272,22 +272,85 @@ subro_sandbox_backend() {
   esac
 }
 
+# Resolve cplt before any sandbox PATH mutation (host PATH may omit ~/.local/bin in agent-run).
+subro_cplt_bin() {
+  if [[ -n "${SUBRO_CPLT_BIN:-}" && -x "${SUBRO_CPLT_BIN}" ]]; then
+    printf '%s' "${SUBRO_CPLT_BIN}"
+    return 0
+  fi
+  command -v cplt 2>/dev/null || true
+}
+
 subro_cplt_available() {
-  command -v cplt >/dev/null 2>&1
+  [[ -n "$(subro_cplt_bin)" ]]
+}
+
+# Map subro harness argv to cplt --agent mode. cplt --agent shell cannot exec bare
+# command names (e.g. "pi", "bash"); use pi/opencode agents or shell -c instead.
+# Sets: cplt_agent (string), cplt_cmd (array, may be empty for interactive shell).
+subro_cplt_map_harness() {
+  local harness="${1:?}"
+  shift
+
+  CPLT_AGENT=""
+  CPLT_CMD=()
+
+  case "$harness" in
+    pi)
+      CPLT_AGENT=pi
+      CPLT_CMD=("$@")
+      ;;
+    opencode)
+      CPLT_AGENT=opencode
+      CPLT_CMD=("$@")
+      ;;
+    bash)
+      CPLT_AGENT=shell
+      if [[ "${1:-}" == "-lc" || "${1:-}" == "-c" ]]; then
+        shift
+        [[ $# -ge 1 ]] || return 2
+        # Propagate inner exit code when cplt forwards shell status.
+        CPLT_CMD=(-c "$1; __subro_rc=\$?; exit \$__subro_rc")
+      elif [[ $# -gt 0 ]]; then
+        CPLT_CMD=("$@")
+      fi
+      ;;
+    *)
+      CPLT_AGENT=shell
+      CPLT_CMD=("$harness" "$@")
+      ;;
+  esac
 }
 
 # Run the agent command under navikt/cplt (external binary). Caller exports harness
 # env vars before invoking. Does not nest with native Seatbelt/Landlock.
+# cplt_bin must be an absolute or host-PATH-resolved path — not looked up after PATH is scrubbed.
 subro_run_cplt_sandbox() {
   local sandbox_path="$1"
   local sock="$2"
   local root="$3"
-  shift 3
+  local cplt_bin="$4"
+  shift 4
 
-  local sock_dir
-  sock_dir="$(dirname "$sock")"
-  local -a cplt_args=(--agent shell -y --allow-write "$sock_dir")
+  if ! subro_cplt_map_harness "$@"; then
+    echo "subro: invalid cplt harness invocation" >&2
+    return 2
+  fi
 
+  # Broker UDS: connect-only via --allow-unix-socket (Ceiku/cplt; --allow-write no longer grants connect).
+  local -a cplt_args=(--agent "$CPLT_AGENT" -y)
+  if [[ -n "$sock" ]]; then
+    cplt_args+=(--allow-unix-socket "$sock")
+  fi
+
+  # pi / opencode need loopback (TUI, harness IPC). Disable with SUBRO_CPLT_NO_LOCALHOST=1.
+  if [[ "$CPLT_AGENT" == "pi" || "$CPLT_AGENT" == "opencode" ]]; then
+    if [[ "${SUBRO_CPLT_NO_LOCALHOST:-}" != "1" ]]; then
+      cplt_args+=(--allow-localhost-any)
+    fi
+  fi
+
+  # Env for the sandboxed child (--pass-env). Do not use this PATH to find cplt.
   export PATH="$sandbox_path"
   export BROKER_SOCK="$sock"
   export SUBRO_ROOT="$root"
@@ -302,7 +365,11 @@ subro_run_cplt_sandbox() {
   [[ -n "${OPENCODE_STATE_DIR:-}" ]] && cplt_args+=(--pass-env OPENCODE_STATE_DIR)
   [[ -n "${OPENCODE_CONFIG:-}" ]] && cplt_args+=(--pass-env OPENCODE_CONFIG)
 
-  cplt "${cplt_args[@]}" -- "$@"
+  if [[ ${#CPLT_CMD[@]} -eq 0 ]]; then
+    "$cplt_bin" "${cplt_args[@]}"
+  else
+    "$cplt_bin" "${cplt_args[@]}" -- "${CPLT_CMD[@]}"
+  fi
 }
 
 # Print one-line Landlock status for doctor/setup. Returns 0 when usable.
