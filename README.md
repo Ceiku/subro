@@ -116,6 +116,7 @@ The sandbox sets `HOME` to `./.agent-home`, so harnesses that store config under
 | Harness | Gotcha | Fix |
 |---------|--------|-----|
 | **pi** | fake `HOME` hides `~/.pi/agent` | `PI_CODING_AGENT_DIR` (automatic via `./bin/agent pi`) |
+| **pi** | locks/sessions under `~/.pi/agent` | Seatbelt/Landlock write allowlist for that dir in pi mode |
 | **pi** | `pi` / `node` not on sandbox `PATH` | shims in `./.agent-bin/` |
 | **OpenCode** | fake `HOME` hides `~/.config/opencode` and `~/.local/share/opencode` | `OPENCODE_CONFIG_DIR`, `OPENCODE_DATA_DIR`, etc. (automatic via `./bin/agent opencode`) |
 | **OpenCode** | global skills not in project `.opencode/` | `./bin/skills-sync --global-opencode` → `~/.config/opencode/skills/` |
@@ -200,7 +201,9 @@ To stop:
 The sandbox wrapper clears the environment (`env -i`), sets a minimal `PATH` that prefers `./interceptors`, and tries to enforce kernel sandboxing:
 
 - macOS: `sandbox-exec` (Seatbelt)
-- Linux: `landlock-restrict` (if installed)
+- Linux: vendored `landlock-restrict` (build with `./bin/build-landlock-restrict`; falls back to unsandboxed if missing)
+
+On Linux, `./bin/setup` tries to build the vendored helper automatically. Override with `SUBRO_LANDLOCK_RESTRICT=/path/to/landlock-restrict`. See [tools/landlock-restrict/README.md](tools/landlock-restrict/README.md).
 
 Example (replace with your agent CLI):
 

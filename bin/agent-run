@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=bin/_lib.sh
+source "${ROOT}/bin/_lib.sh"
 
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <agent-command> [args...]" >&2
@@ -127,6 +129,9 @@ EOF
   if [[ -n "$macos_user_temp" ]]; then
     printf '\n(allow file-write* (subpath "%s"))\n' "$macos_user_temp" >>"$profile_file"
   fi
+  if [[ "${1:-}" == "pi" || "${1:-}" == "opencode" ]]; then
+    subro_append_seatbelt_harness_writes "${1}" "$profile_file"
+  fi
 
   sandbox_env sandbox-exec -f "$profile_file" -- "$@"
   rc=$?
@@ -138,17 +143,32 @@ EOF
 }
 
 run_linux_landlock() {
-  if ! command -v landlock-restrict >/dev/null 2>&1; then
+  local harness="${1:-}"
+  local wp landlock_bin
+  local -a landlock_rw=(
+    --allow-read-write "$WORKDIR"
+    --allow-read-write "$INTERCEPTORS_DIR"
+    --allow-read-write "$AGENT_BIN_DIR"
+    --allow-read-write "$(dirname "$SOCK")"
+  )
+
+  landlock_bin="$(subro_landlock_restrict_bin "$ROOT")"
+  if [[ -z "$landlock_bin" ]]; then
     echo "landlock-restrict not found; running without kernel sandbox." >&2
+    echo "  Build: ./bin/build-landlock-restrict" >&2
     run_unsandboxed "$@"
   fi
 
+  while IFS= read -r wp; do
+    [[ -n "$wp" ]] || continue
+    landlock_rw+=(--allow-read-write "$wp")
+  done < <(subro_harness_write_paths "$harness")
+
   # landlock-restrict policy:
-  # - allow full access to current workdir + socket
+  # - allow full access to current workdir + socket + harness host dirs
   # - deny sensitive host dirs (best-effort, depends on landlock-restrict implementation)
-  sandbox_env landlock-restrict \
-      --allow-read-write "$WORKDIR" \
-      --allow-read-write "$(dirname "$SOCK")" \
+  sandbox_env "$landlock_bin" \
+      "${landlock_rw[@]}" \
       --deny-read-write "$WORKDIR/.env" \
       --deny-read-write "$WORKDIR/.env.local" \
       --deny-read-write "$WORKDIR/.env.development" \
@@ -175,14 +195,9 @@ run_linux_landlock() {
   exit "$rc"
 }
 
-if [[ "${1:-}" == "pi" || "${1:-}" == "opencode" ]]; then
-  # shellcheck source=bin/_lib.sh
-  source "${ROOT}/bin/_lib.sh"
-fi
-
 if [[ "${1:-}" == "pi" ]]; then
   subro_prepare_pi_shims "$WORKDIR" || exit 1
-  export PI_CODING_AGENT_DIR="${PI_CODING_AGENT_DIR:-${HOME}/.pi/agent}"
+  subro_export_pi_harness_env "$HOME"
 fi
 
 if [[ "${1:-}" == "opencode" ]]; then

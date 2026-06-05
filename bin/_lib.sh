@@ -101,6 +101,39 @@ subro_prepare_pi_shims() {
   subro_prepare_node_cli_shims "${1:?}" pi
 }
 
+# Real pi harness dir (must be writable through kernel sandbox).
+subro_export_pi_harness_env() {
+  local real_home="${1:-$HOME}"
+  export PI_CODING_AGENT_DIR="${PI_CODING_AGENT_DIR:-${real_home}/.pi/agent}"
+}
+
+# Host paths harness CLIs must write to (locks, sessions, auth). One per line.
+subro_harness_write_paths() {
+  local harness="${1:-}"
+  case "$harness" in
+    pi)
+      [[ -n "${PI_CODING_AGENT_DIR:-}" ]] && printf '%s\n' "$PI_CODING_AGENT_DIR"
+      ;;
+    opencode)
+      [[ -n "${OPENCODE_CONFIG_DIR:-}" ]] && printf '%s\n' "$OPENCODE_CONFIG_DIR"
+      [[ -n "${OPENCODE_DATA_DIR:-}" ]] && printf '%s\n' "$OPENCODE_DATA_DIR"
+      [[ -n "${OPENCODE_CACHE_DIR:-}" ]] && printf '%s\n' "$OPENCODE_CACHE_DIR"
+      [[ -n "${OPENCODE_STATE_DIR:-}" ]] && printf '%s\n' "$OPENCODE_STATE_DIR"
+      ;;
+  esac
+}
+
+# Append Seatbelt write rules for harness host dirs to a profile file.
+subro_append_seatbelt_harness_writes() {
+  local harness="${1:-}"
+  local profile_file="${2:?}"
+  local wp
+  while IFS= read -r wp; do
+    [[ -n "$wp" ]] || continue
+    printf '(allow file-write* (subpath "%s"))\n' "$wp" >>"$profile_file"
+  done < <(subro_harness_write_paths "$harness")
+}
+
 # Point OpenCode at the real harness dirs (sandbox uses a fake HOME).
 subro_export_opencode_harness_env() {
   local real_home="${1:-$HOME}"
@@ -119,6 +152,46 @@ subro_prepare_opencode_shims() {
   if [[ -n "$bun_bin" ]]; then
     ln -sfn "$bun_bin" "${workdir}/.agent-bin/bun"
   fi
+}
+
+# Resolve landlock-restrict binary (Linux sandbox helper).
+# Optional arg: repo root (defaults to SUBRO_ROOT).
+subro_landlock_restrict_bin() {
+  local root="${1:-${SUBRO_ROOT:-}}"
+  if [[ -n "${SUBRO_LANDLOCK_RESTRICT:-}" && -x "${SUBRO_LANDLOCK_RESTRICT}" ]]; then
+    echo "${SUBRO_LANDLOCK_RESTRICT}"
+    return 0
+  fi
+  if [[ -n "$root" && -x "${root}/tools/landlock-restrict/landlock-restrict" ]]; then
+    echo "${root}/tools/landlock-restrict/landlock-restrict"
+    return 0
+  fi
+  command -v landlock-restrict 2>/dev/null || true
+}
+
+# Print one-line Landlock status for doctor/setup. Returns 0 when usable.
+subro_landlock_status() {
+  local root="${1:-}"
+  local bin
+
+  if [[ "$(uname -s)" != "Linux" ]]; then
+    echo "n/a (not Linux)"
+    return 0
+  fi
+
+  bin="$(subro_landlock_restrict_bin "$root")"
+  if [[ -z "$bin" ]]; then
+    echo "missing (run ./bin/build-landlock-restrict or install landlock-restrict on PATH)"
+    return 1
+  fi
+
+  if "$bin" --help >/dev/null 2>&1; then
+    echo "available: $bin"
+    return 0
+  fi
+
+  echo "broken: $bin (--help failed)"
+  return 1
 }
 
 # Symlink each skills/<name>/ into a harness skills directory.

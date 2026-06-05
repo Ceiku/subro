@@ -37,7 +37,7 @@ Status legend: `done` | `partial` | `todo`
 |----|------|--------|-------|
 | P3.1 | README overhaul (remove repo-create boilerplate) | done | |
 | P3.2 | `setup` generates socket token | done | |
-| P3.3 | Linux Landlock CI / real binary | todo | |
+| P3.3 | Linux Landlock CI / real binary | done | vendored `tools/landlock-restrict`, `bin/build-landlock-restrict`, doctor/setup detection, `.github/workflows/linux-landlock.yml` |
 | P3.4 | Integration test script | todo | |
 | P3.5 | Fair Source license (FSL-1.1-ALv2) | done | `LICENSE`, `FAIR-SOURCE.md`, `CONTRIBUTING.md`, `TRADEMARK.md` |
 | P3.6 | First-class `./bin/agent pi` integration | done | shims, `PI_CODING_AGENT_DIR`, `--global-pi` |
@@ -47,6 +47,7 @@ Status legend: `done` | `partial` | `todo`
 | P3.10 | Fix `SUBRO_NO_SANDBOX=1` | done | `sandbox_env` function no longer exec'd |
 | P3.11 | Broker lifecycle docs + stale socket/pid | done | `broker-daemon status`, README |
 | P3.12 | First-class `./bin/agent opencode` integration | done | shims, `OPENCODE_*_DIR`, `--global-opencode` |
+| P3.13 | Harness sandbox write allowlist (pi/opencode host dirs) | done | `~/.pi/agent`, `OPENCODE_*` dirs writable in harness modes |
 
 ## P4 — Future (from planning doc)
 

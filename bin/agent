@@ -27,7 +27,7 @@ if [[ "$1" == "pi" ]]; then
   shift
   subro_prepare_pi_shims "$(pwd)"
   subro_sync_pi_global_skills "$ROOT" >/dev/null 2>&1 || true
-  export PI_CODING_AGENT_DIR="${PI_CODING_AGENT_DIR:-${HOME}/.pi/agent}"
+  subro_export_pi_harness_env "$HOME"
   exec "$ROOT/bin/agent-run" pi "$@"
 fi
 
